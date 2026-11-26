@@ -11,6 +11,12 @@ Site de collectionneur manga : catalogue des séries réelles avec les ISBN de c
 - **Comptes et collection** : connexion par e-mail, pseudo et niveau (1 niveau tous les 10 tomes), pour chaque tome « je l'ai », nombre d'exemplaires (doubles) et liste de souhaits.
 - **Import des ISBN en masse** : `scripts/import_isbn.py`, qui lit le site de l’éditeur (Glénat), Google Books ou le catalogue BnF.
 
+## Pré-remplir le catalogue (tous les mangas publiés en France)
+
+Onglet **Actions → « Pré-remplir le catalogue (BnF) » → Run workflow** : choisis les éditeurs (« tous » ou par ex. `Pika,Kana`) et les années.
+Laisse « Test à blanc » coché la première fois pour voir ce qui serait importé. Chaque lundi, l'action ajoute aussi toute seule les nouveautés.
+Tout ce qu'elle crée est marqué `source = 'bnf'` ; un ISBN déjà présent n'est jamais modifié.
+
 ## Mise en route (une seule fois)
 
 1. **Secrets GitHub** : *Settings → Secrets and variables → Actions → New repository secret*

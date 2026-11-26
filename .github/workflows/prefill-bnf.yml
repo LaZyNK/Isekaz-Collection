@@ -1,0 +1,58 @@
+name: Pré-remplir le catalogue (BnF)
+
+on:
+  # Lancement manuel : onglet "Actions" > "Pré-remplir le catalogue (BnF)" > "Run workflow"
+  workflow_dispatch:
+    inputs:
+      editeurs:
+        description: "« tous » ou une liste (ex. Pika,Kana,Ki-oon)"
+        required: true
+        default: "tous"
+      depuis:
+        description: "Année de début"
+        required: true
+        default: "1990"
+      jusqua:
+        description: "Année de fin (vide = l'an prochain)"
+        required: false
+        default: ""
+      dry_run:
+        description: "Test à blanc (n'écrit rien dans la base)"
+        type: boolean
+        default: true
+  # Chaque lundi à 4 h (heure de Paris en hiver) : les nouveautés de l'année en cours et de la précédente
+  schedule:
+    - cron: "0 3 * * 1"
+
+concurrency:
+  group: prefill-bnf
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Import
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          EDITEURS: ${{ inputs.editeurs }}
+          DEPUIS: ${{ inputs.depuis }}
+          JUSQUA: ${{ inputs.jusqua }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = "schedule" ]; then
+            python scripts/prefill_bnf.py --editeurs tous --nouveautes
+            exit 0
+          fi
+          args=(--editeurs "$EDITEURS" --depuis "$DEPUIS")
+          [ -n "$JUSQUA" ] && args+=(--jusqua "$JUSQUA")
+          [ "$DRY_RUN" = "true" ] && args+=(--dry-run)
+          python scripts/prefill_bnf.py "${args[@]}"

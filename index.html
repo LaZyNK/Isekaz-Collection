@@ -318,6 +318,7 @@
       notCached: "Cette série n'a pas encore été enregistrée sur cet appareil. Ouvre-la une fois avec du réseau pour l'avoir hors ligne.",
       offlineSearch: "La recherche chez les éditeurs a besoin du réseau. Tu peux quand même filtrer le catalogue enregistré.",
       offlineReady: "Ta collection est enregistrée sur cet appareil : elle marchera aussi sans réseau.",
+      showMore: n => `Voir plus (${n} autres séries)`,
       scan: "Scanner", product: "Fiche produit", isbnPh: "ou tape l'ISBN (13 chiffres)", aim: "Vise le code-barres au dos du livre…",
       noCam: "Caméra indisponible : autorise-la dans ton navigateur, ou tape l'ISBN ci-dessous.", badIsbn: "Ce code n'est pas un ISBN de livre valide.",
       loading: "Recherche de la fiche…", notFound: "Aucune fiche trouvée pour cet ISBN.", seeSerie: "Voir la série",
@@ -364,6 +365,7 @@
       notCached: "This series isn't saved on this device yet. Open it once while online to have it offline.",
       offlineSearch: "Searching the publishers needs a connection. You can still filter the saved catalogue.",
       offlineReady: "Your collection is saved on this device: it will work without a connection too.",
+      showMore: n => `Show more (${n} more series)`,
       scan: "Scan", product: "Product sheet", isbnPh: "or type the ISBN (13 digits)", aim: "Point at the barcode on the back of the book…",
       noCam: "Camera unavailable: allow it in your browser, or type the ISBN below.", badIsbn: "This code isn't a valid book ISBN.",
       loading: "Looking up the product…", notFound: "No product found for this ISBN.", seeSerie: "See the series",
@@ -396,7 +398,7 @@
   const $ = id => document.getElementById(id);
   const app = $("app"), notice = $("notice"), q = $("q");
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const state = { user: null, profile: null, series: [], coll: new Map(), view: "catalogue", serie: null, filterIds: null,
+  const state = { user: null, profile: null, series: [], coll: new Map(), view: "catalogue", serie: null, filterIds: null, limit: 60,
                   editionLangs: new Set(store.get("isekaz.editionLangs", [lang])) };
   const TORII = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 4.5c3 .8 6.5 1.1 10 1.1s7-.3 10-1.1V7c-.9.2-1.8.4-2.8.5V9H21v2h-1.8v9h-2.2v-9H7v9H4.8v-9H3V9h1.8V7.5C3.8 7.4 2.9 7.2 2 7V4.5zM7 7.8V9h4V8c-1.4 0-2.7-.1-4-.2zm6 .2v1h4V7.8c-1.3.1-2.6.2-4 .2z"/></svg>`;
 
@@ -462,7 +464,7 @@
     if (isOffline() || syncing) return;
     syncing = true;
     try {
-      const full = Date.now() - store.get("isekaz.catSync", 0) > 864e5;
+      const full = Date.now() - store.get("isekaz.catSync", 0) > 7 * 864e5; // complète une fois par semaine
       const maxId = full ? 0 : store.get("isekaz.catMaxId", 0);
       const cols = "id,serie_id,numero,isbn13,date_parution,prix,devise,couverture_url,titre";
       const rows = [];
@@ -615,7 +617,14 @@
 
   // ---------- Données ----------
   async function loadSeries() {
-    const { data, error } = await db.from("series").select("*, volumes(count)").order("titre");
+    // le serveur renvoie 1000 lignes maximum par demande : on lit le catalogue par paquets
+    let data = [], error = null;
+    for (let from = 0; ; from += 1000) {
+      const r = await db.from("series").select("*, volumes(count)").order("titre").order("id").range(from, from + 999);
+      if (r.error) { error = r.error; break; }
+      data.push(...r.data);
+      if (r.data.length < 1000) break;
+    }
     if (!error) { state.series = data; await local.set("series", data); return; }
     state.series = (await local.get("series")) ?? [];
     if (!netError(error)) say(t("error") + error.message);
@@ -697,10 +706,13 @@
     const showHero = !f && !state.filterIds;
     app.innerHTML = (showHero ? hero() : "") + langFilters() +
       `<h3 class="section-title">${TORII}${showHero ? t("allSeries") : t("results")}</h3>` +
-      (visible.length ? `<div class="series">${visible.map(serieCard).join("")}</div>` : "") +
+      (visible.length ? `<div class="series">${visible.slice(0, state.limit).map(serieCard).join("")}</div>` : "") +
+      (visible.length > state.limit ? `<p style="text-align:center;margin-top:20px"><button class="btn ghost" id="moreBtn">${t("showMore", visible.length - state.limit)}</button></p>` : "") +
       (hidden ? `<p class="empty">${t("hiddenByLang", hidden)}</p>` : "") +
       (!list.length ? `<p class="empty">${t("notHere")}</p>` : "");
     bindFilters(); bindCards();
+    const more = $("moreBtn");
+    if (more) more.onclick = () => { state.limit += 60; renderCatalogue(); };
   }
 
   function volCell(v, num) {
@@ -807,7 +819,7 @@
   document.querySelectorAll("#nav button").forEach(b => b.onclick = () => { state.view = b.dataset.view; state.filterIds = null; say(""); render(); });
   $("home").onclick = () => { state.view = "catalogue"; state.filterIds = null; q.value = ""; say(""); render(); };
   $("siteLang").onchange = e => { lang = e.target.value; store.set("isekaz.lang", lang); applyI18n(); renderAccount(); render(); updateOffline(); };
-  q.addEventListener("input", () => { state.filterIds = null; if (state.view !== "catalogue") state.view = "catalogue"; say(""); renderCatalogue(); setNav(); });
+  q.addEventListener("input", () => { state.filterIds = null; state.limit = 60; if (state.view !== "catalogue") state.view = "catalogue"; say(""); renderCatalogue(); setNav(); });
   $("searchForm").addEventListener("submit", e => {
     e.preventDefault();
     const x = q.value.trim();
