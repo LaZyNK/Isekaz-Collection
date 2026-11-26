@@ -87,3 +87,9 @@ from public.collection group by user_id;
 -- fr, en, de, it, es, ja… : sert au filtre « Langue de l'édition » du site.
 alter table public.series add column if not exists langue text not null default 'fr';
 create index if not exists series_langue_idx on public.series (langue);
+
+-- ===== Fiche produit (migration « fiche_produit ») =====
+alter table public.volumes add column if not exists description text;
+alter table public.volumes add column if not exists prix numeric(8,2);
+alter table public.volumes add column if not exists devise text;
+alter table public.volumes add column if not exists fiche_maj timestamptz;

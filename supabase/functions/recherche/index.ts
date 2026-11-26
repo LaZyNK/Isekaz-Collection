@@ -16,7 +16,8 @@ const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
 type Tome = { titre: string; edition: string | null; editeur: string; auteur: string | null; langue: string;
-              numero: number; isbn13: string; date: string | null; couverture: string | null };
+              numero: number; isbn13: string; date: string | null; couverture: string | null;
+              description?: string | null; prix?: number | null; devise?: string | null };
 
 const clean = (s: string) => s.replace(/\s+/g, " ").trim();
 // Langue probable d'après le groupe de l'ISBN (si Google ne la donne pas)
@@ -74,6 +75,25 @@ function analyseTitre(full: string): { titre: string; edition: string | null; nu
   return { titre: clean(parts[0]), edition: parts.length > 1 ? clean(parts.slice(1).join(" - ")) : null, numero };
 }
 
+const sansHtml = (h?: string) => h ? clean(h.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ")
+  .replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'")).slice(0, 4000) : null;
+
+// Fiche brute d'un ISBN chez Google (sert aussi aux one-shots et coffrets sans numéro de tome)
+async function googleBrut(isbn: string): Promise<any | null> {
+  const url = new URL("https://www.googleapis.com/books/v1/volumes");
+  url.searchParams.set("q", `isbn:${isbn}`);
+  if (GOOGLE_KEY) url.searchParams.set("key", GOOGLE_KEY);
+  const r = await fetch(url);
+  if (!r.ok) { console.log("google", r.status); return null; }
+  const items = (await r.json()).items ?? [];
+  return items.find((it: any) => (it.volumeInfo?.industryIdentifiers ?? []).some((i: any) => i.identifier === isbn)) ?? items[0] ?? null;
+}
+
+function infosVente(it: any): { prix: number | null; devise: string | null } {
+  const p = it?.saleInfo?.listPrice ?? it?.saleInfo?.retailPrice;
+  return p?.amount ? { prix: Math.round(p.amount * 100) / 100, devise: p.currencyCode ?? null } : { prix: null, devise: null };
+}
+
 async function google(q: string, start = 0): Promise<Tome[]> {
   const url = new URL("https://www.googleapis.com/books/v1/volumes");
   url.searchParams.set("q", q);
@@ -94,7 +114,8 @@ async function google(q: string, start = 0): Promise<Tome[]> {
     out.push({ ...t, editeur: editeurPropre(vi.publisher ?? INCONNU), auteur: vi.authors?.[0] ?? null,
       langue: (vi.language || langueIsbn(isbn)).slice(0, 2),
       isbn13: isbn, date: /^\d{4}-\d{2}-\d{2}$/.test(vi.publishedDate ?? "") ? vi.publishedDate : null,
-      couverture: vi.imageLinks?.thumbnail?.replace("http://", "https://") ?? null });
+      couverture: vi.imageLinks?.thumbnail?.replace("http://", "https://") ?? null,
+      description: sansHtml(vi.description), ...infosVente(it) });
   }
   return out;
 }
@@ -139,7 +160,8 @@ async function enregistrer(tomes: Tome[]): Promise<number[]> {
     for (const t of g.sort((a, b) => a.numero - b.numero)) {
       if (pris.has(t.numero)) continue;
       pris.add(t.numero);
-      lignes.push({ serie_id: id, numero: t.numero, isbn13: t.isbn13, date_parution: t.date, couverture_url: t.couverture });
+      lignes.push({ serie_id: id, numero: t.numero, isbn13: t.isbn13, date_parution: t.date, couverture_url: t.couverture,
+        description: t.description ?? null, prix: t.prix ?? null, devise: t.devise ?? null });
     }
     // un par un : un ISBN déjà connu ailleurs ne bloque pas les autres
     for (const l of lignes) await db.from("volumes").insert(l);
@@ -147,26 +169,80 @@ async function enregistrer(tomes: Tome[]): Promise<number[]> {
   return ids;
 }
 
+async function lireTome(isbn: string) {
+  const { data } = await db.from("volumes").select("*, series(*)").eq("isbn13", isbn).maybeSingle();
+  return data;
+}
+
+// Ajoute la série d'un ISBN (et ses autres tomes). Sans numéro de tome (one-shot, coffret…), il devient le n°1 de sa propre fiche.
+async function ajouterIsbn(isbn: string): Promise<number[]> {
+  let tomes = await google(`isbn:${isbn}`);
+  if (!tomes.length) tomes = await openLibrary(isbn);
+  if (!tomes.length) {
+    const it = await googleBrut(isbn);
+    const vi = it?.volumeInfo;
+    if (!vi?.title) return [];
+    const titre = clean(`${vi.title}${vi.subtitle ? " - " + vi.subtitle : ""}`).slice(0, 200);
+    return enregistrer([{ titre, edition: null, editeur: editeurPropre(vi.publisher ?? INCONNU), auteur: vi.authors?.[0] ?? null,
+      langue: (vi.language || langueIsbn(isbn)).slice(0, 2), numero: 1, isbn13: isbn,
+      date: /^\d{4}-\d{2}-\d{2}$/.test(vi.publishedDate ?? "") ? vi.publishedDate : null,
+      couverture: vi.imageLinks?.thumbnail?.replace("http://", "https://") ?? null,
+      description: sansHtml(vi.description), ...infosVente(it) }]);
+  }
+  const t = tomes.find((x) => x.isbn13 === isbn) ?? tomes[0];
+  // on profite de la recherche pour récupérer les autres tomes de la série
+  const cible = t.editeur === INCONNU ? `intitle:"${t.titre}"` : `intitle:"${t.titre}" inpublisher:"${t.editeur}"`;
+  const autres = (await Promise.all([0, 40].map((s) => google(cible, s)))).flat();
+  const liste = resoudreEditeurs(sansDoublons([t, ...autres])).filter((a) => a.titre.toLowerCase() === t.titre.toLowerCase());
+  // le tome scanné est toujours gardé, même si son éditeur reste inconnu
+  const scanne = liste.find((a) => a.isbn13 === isbn) ?? t;
+  return enregistrer([scanne, ...liste.filter((a) => a.isbn13 !== isbn && a.editeur === scanne.editeur)]);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   let body: any = {};
   try { body = await req.json(); } catch { /* corps vide */ }
+
+  // Fiche produit : le tome + sa série, complétés (description, prix, date) au premier affichage
+  const fiche = String(body.fiche ?? "").replace(/[^0-9]/g, "");
+  if (fiche) {
+    if (!/^97[89]\d{10}$/.test(fiche)) return json({ error: "ISBN-13 invalide" }, 400);
+    let v = await lireTome(fiche);
+    if (!v) { await ajouterIsbn(fiche); v = await lireTome(fiche); }
+    if (!v) {
+      // le numéro existe déjà avec un autre ISBN (réimpression, tirage spécial…) : rangé à part pour ne pas le perdre
+      const t = (await google(`isbn:${fiche}`)).find((x) => x.isbn13 === fiche);
+      if (t) {
+        const ed = `${t.edition ? t.edition + " - " : ""}Autres tirages (à vérifier)`;
+        await enregistrer([{ ...t, edition: ed }]);
+        v = await lireTome(fiche);
+      }
+    }
+    if (!v) return json({ volume: null, source: "introuvable" });
+    if (!v.fiche_maj) {
+      const it = await googleBrut(fiche);
+      const vi = it?.volumeInfo ?? {};
+      const maj: Record<string, unknown> = { fiche_maj: new Date().toISOString() };
+      if (!v.description && vi.description) maj.description = sansHtml(vi.description);
+      const vente = infosVente(it);
+      if (v.prix == null && vente.prix != null) { maj.prix = vente.prix; maj.devise = vente.devise; }
+      if (!v.date_parution && /^\d{4}-\d{2}-\d{2}$/.test(vi.publishedDate ?? "")) maj.date_parution = vi.publishedDate;
+      if (!v.couverture_url && vi.imageLinks?.thumbnail) maj.couverture_url = vi.imageLinks.thumbnail.replace("http://", "https://");
+      if (!v.titre && vi.title) maj.titre = clean(`${vi.title}${vi.subtitle ? " - " + vi.subtitle : ""}`).slice(0, 200);
+      await db.from("volumes").update(maj).eq("id", v.id);
+      v = await lireTome(fiche);
+    }
+    return json({ volume: v, source: "base" });
+  }
 
   const isbn = String(body.isbn ?? "").replace(/[^0-9Xx]/g, "");
   if (isbn) {
     if (!/^97[89]\d{10}$/.test(isbn)) return json({ error: "ISBN-13 invalide" }, 400);
     const { data: v } = await db.from("volumes").select("serie_id").eq("isbn13", isbn).maybeSingle();
     if (v) return json({ series: [v.serie_id], source: "base" });
-    let tomes = await google(`isbn:${isbn}`);
-    if (!tomes.length) tomes = await openLibrary(isbn);
-    if (!tomes.length) return json({ series: [], source: "introuvable" });
-    const t = tomes[0];
-    // on profite de la recherche pour récupérer les autres tomes de la série
-    const cible = t.editeur === INCONNU ? `intitle:"${t.titre}"` : `intitle:"${t.titre}" inpublisher:"${t.editeur}"`;
-    const autres = (await Promise.all([0, 40].map((s) => google(cible, s)))).flat();
-    const ids = await enregistrer(resoudreEditeurs(sansDoublons([t, ...autres]))
-      .filter((a) => a.titre.toLowerCase() === t.titre.toLowerCase()));
-    return json({ series: ids.slice(0, 1).concat(ids.slice(1)), source: "ajout" });
+    const ids = await ajouterIsbn(isbn);
+    return json({ series: ids, source: ids.length ? "ajout" : "introuvable" });
   }
 
   const q = clean(String(body.q ?? ""));
