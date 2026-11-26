@@ -8,112 +8,361 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #12111a; --panel: #1c1b27; --line: #2d2b3d; --text: #ecebf3;
-    --muted: #9a98ad; --accent: #ff6b3d; --accent-2: #ffc23d;
+    --bg: #12111a; --panel: #1c1b27; --panel-2: #232233; --line: #2d2b3d; --text: #ecebf3;
+    --muted: #9a98ad; --accent: #ff6b3d; --accent-2: #ffc23d; --ok: #3ddc84; --wish: #ff4f8b;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; }
-  header { display: flex; align-items: center; justify-content: space-between; gap: 16px;
-           padding: 16px clamp(16px, 4vw, 40px); border-bottom: 1px solid var(--line);
-           position: sticky; top: 0; background: rgba(18,17,26,.92); backdrop-filter: blur(8px); z-index: 2; }
-  h1 { font-family: "Bebas Neue", sans-serif; font-size: 32px; letter-spacing: 1px; margin: 0; }
+  button { font: inherit; cursor: pointer; }
+  header { position: sticky; top: 0; z-index: 5; background: rgba(18,17,26,.94); backdrop-filter: blur(8px);
+           border-bottom: 1px solid var(--line); padding: 12px clamp(16px, 4vw, 40px); }
+  .top { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+  h1 { font-family: "Bebas Neue", sans-serif; font-size: 30px; letter-spacing: 1px; margin: 0; white-space: nowrap; cursor: pointer; }
   h1 span { color: var(--accent); }
+  .account { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .pseudo { font-weight: 600; }
+  .level { background: linear-gradient(90deg, var(--accent), var(--accent-2)); color: #1a1208; font-weight: 700;
+           border-radius: 999px; padding: 3px 10px; font-size: 12px; white-space: nowrap; }
+  .btn { background: var(--accent); color: #1a1208; border: none; border-radius: 10px; padding: 8px 14px; font-weight: 600; }
+  .btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+  .bar2 { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+  .search { flex: 1 1 260px; display: flex; gap: 8px; }
   input { background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 10px;
-          padding: 10px 14px; font: inherit; width: min(320px, 50vw); }
+          padding: 10px 14px; font: inherit; width: 100%; }
   input:focus { outline: 2px solid var(--accent); border-color: transparent; }
-  main { padding: 24px clamp(16px, 4vw, 40px); max-width: 1200px; margin: 0 auto; }
-  .series { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+  nav { display: flex; gap: 6px; }
+  nav button { background: none; border: 1px solid transparent; color: var(--muted); border-radius: 999px; padding: 7px 12px; }
+  nav button.on { color: var(--text); border-color: var(--line); background: var(--panel); }
+  main { padding: 24px clamp(16px, 4vw, 40px) 60px; max-width: 1200px; margin: 0 auto; }
+  .notice { color: var(--muted); font-size: 14px; margin: 0 0 16px; min-height: 1em; }
+  .series { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; cursor: pointer;
           transition: transform .15s, border-color .15s; }
   .card:hover { transform: translateY(-2px); border-color: var(--accent); }
   .card h2 { font-family: "Bebas Neue", sans-serif; font-size: 26px; margin: 0 0 4px; letter-spacing: .5px; }
   .meta { color: var(--muted); font-size: 14px; }
-  .bar { height: 6px; background: var(--line); border-radius: 3px; margin-top: 14px; overflow: hidden; }
-  .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
-  .back { background: none; border: none; color: var(--accent); font: inherit; cursor: pointer; padding: 0; margin-bottom: 16px; }
-  .vols { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; margin-top: 20px; }
-  .vol { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .progress { height: 6px; background: var(--line); border-radius: 3px; margin-top: 14px; overflow: hidden; }
+  .progress i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  .back { background: none; border: none; color: var(--accent); padding: 0; margin-bottom: 14px; }
+  .title-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  .vols { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; margin-top: 20px; }
+  .vol { background: var(--panel); border: 2px solid var(--line); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+  .vol.owned { border-color: var(--ok); }
+  .vol.wished { border-color: var(--wish); }
   .vol.missing { opacity: .45; border-style: dashed; }
-  .cover { aspect-ratio: 2/3; background: #26243a; display: grid; place-items: center;
+  .cover { aspect-ratio: 2/3; background: var(--panel-2); display: grid; place-items: center; position: relative;
            font-family: "Bebas Neue", sans-serif; font-size: 44px; color: var(--muted); }
   .cover img { width: 100%; height: 100%; object-fit: cover; }
-  .vol div.info { padding: 8px 10px; font-size: 13px; }
-  .isbn { font-family: ui-monospace, monospace; color: var(--muted); font-size: 12px; }
+  .badge { position: absolute; top: 8px; right: 8px; background: var(--ok); color: #062; font: 700 12px Inter, sans-serif;
+           border-radius: 999px; padding: 3px 8px; }
+  .badge.dbl { background: var(--accent-2); color: #3a2a00; }
+  .info { padding: 8px 10px; font-size: 13px; }
+  .isbn { font-family: ui-monospace, monospace; color: var(--muted); font-size: 11px; }
+  .actions { display: flex; gap: 6px; padding: 0 10px 10px; margin-top: auto; align-items: center; }
+  .actions button { flex: 1; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); padding: 6px 0; font-size: 13px; }
+  .actions button.on-own { background: var(--ok); color: #062; border-color: var(--ok); font-weight: 700; }
+  .actions button.on-wish { background: var(--wish); color: #fff; border-color: var(--wish); }
+  .qty { display: flex; align-items: center; gap: 4px; flex: 1.4; }
+  .qty button { flex: 0 0 28px; }
+  .qty span { flex: 1; text-align: center; font-weight: 600; }
+  .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; min-width: 130px; }
+  .stat b { display: block; font-family: "Bebas Neue", sans-serif; font-size: 34px; }
   .empty { color: var(--muted); padding: 40px 0; text-align: center; }
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 16px; padding: 24px; width: min(380px, 92vw); }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog h3 { font-family: "Bebas Neue", sans-serif; font-size: 28px; margin: 0 0 14px; }
+  dialog form { display: grid; gap: 10px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tabs button { flex: 1; background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+  .tabs button.on { color: var(--text); border-color: var(--accent); }
+  .err { color: #ff8a8a; font-size: 13px; min-height: 1em; }
+  @media (max-width: 560px) { h1 { font-size: 24px; } .account .pseudo { max-width: 90px; overflow: hidden; text-overflow: ellipsis; } }
 </style>
 </head>
 <body>
 <header>
-  <h1>Isekaz <span>Collection</span></h1>
-  <input id="q" type="search" placeholder="Chercher une série ou un ISBN…" autocomplete="off">
+  <div class="top">
+    <h1 id="home">Isekaz <span>Collection</span></h1>
+    <div class="account" id="account"></div>
+  </div>
+  <div class="bar2">
+    <form class="search" id="searchForm">
+      <input id="q" type="search" placeholder="Une série ou un ISBN (même s'il n'est pas encore sur le site)" autocomplete="off">
+      <button class="btn" type="submit">Chercher</button>
+    </form>
+    <nav id="nav">
+      <button data-view="catalogue" class="on">Catalogue</button>
+      <button data-view="collection">Ma collection</button>
+      <button data-view="souhaits">Souhaits</button>
+    </nav>
+  </div>
 </header>
-<main id="app"><p class="empty">Chargement…</p></main>
+<main>
+  <p class="notice" id="notice"></p>
+  <div id="app"><p class="empty">Chargement…</p></div>
+</main>
+
+<dialog id="auth">
+  <div class="tabs"><button data-mode="login" class="on">Connexion</button><button data-mode="signup">Créer un compte</button></div>
+  <form id="authForm" method="dialog">
+    <input id="aPseudo" placeholder="Pseudo (3 à 24 caractères)" minlength="3" maxlength="24" hidden>
+    <input id="aEmail" type="email" placeholder="E-mail" required autocomplete="email">
+    <input id="aPass" type="password" placeholder="Mot de passe (6 caractères min.)" minlength="6" required autocomplete="current-password">
+    <p class="err" id="aErr"></p>
+    <button class="btn" type="submit" id="aSubmit">Se connecter</button>
+    <button class="btn ghost" type="button" id="aClose">Annuler</button>
+  </form>
+</dialog>
 
 <script type="module">
   import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-  // Clé publique (lecture seule grâce aux règles RLS) — la clé service_role ne va JAMAIS ici.
-  const db = createClient(
-    "https://rohiqowmjtcrrailkgdb.supabase.co",
-    "sb_publishable_626JHq5Ylaj9hbhs9mZKrA_ildFkUoA"
-  );
-  const app = document.getElementById("app");
-  const q = document.getElementById("q");
-  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  let series = [];
+  // Clé publique (lecture seule grâce aux règles RLS) — la clé secrète ne va JAMAIS ici.
+  const URL_SB = "https://rohiqowmjtcrrailkgdb.supabase.co";
+  const db = createClient(URL_SB, "sb_publishable_626JHq5Ylaj9hbhs9mZKrA_ildFkUoA");
 
-  async function load() {
-    const { data, error } = await db.from("series").select("*, volumes(count)").order("titre");
-    if (error) { app.innerHTML = `<p class="empty">Erreur : ${esc(error.message)}</p>`; return; }
-    series = data;
-    renderList();
+  const $ = id => document.getElementById(id);
+  const app = $("app"), notice = $("notice"), q = $("q");
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const state = { user: null, profile: null, series: [], coll: new Map(), view: "catalogue", serie: null };
+
+  // ---------- Compte ----------
+  async function loadUser() {
+    const { data: { session } } = await db.auth.getSession();
+    state.user = session?.user ?? null;
+    state.profile = null; state.coll = new Map();
+    if (state.user) {
+      const [{ data: p }, { data: c }] = await Promise.all([
+        db.from("profiles").select("pseudo").eq("id", state.user.id).maybeSingle(),
+        db.from("collection").select("volume_id, quantite, souhait"),
+      ]);
+      state.profile = p;
+      (c ?? []).forEach(r => state.coll.set(r.volume_id, r));
+    }
+    renderAccount();
   }
 
-  function renderList(filter = "") {
-    const f = filter.toLowerCase();
-    const list = series.filter(s => `${s.titre} ${s.edition ?? ""} ${s.editeur ?? ""}`.toLowerCase().includes(f));
-    if (!list.length) { app.innerHTML = `<p class="empty">Aucune série trouvée.</p>`; return; }
-    app.innerHTML = `<div class="series">${list.map(s => {
-      const n = s.volumes[0]?.count ?? 0, total = s.nb_tomes || n || 1;
-      return `<div class="card" data-id="${s.id}">
-        <h2>${esc(s.titre)}</h2>
-        <div class="meta">${esc(s.edition ?? "")}${s.edition ? " · " : ""}${esc(s.editeur ?? "")}</div>
-        <div class="meta">${n} / ${s.nb_tomes ?? "?"} tomes référencés</div>
-        <div class="bar"><i style="width:${Math.min(100, n / total * 100)}%"></i></div>
-      </div>`;
-    }).join("")}</div>`;
-    app.querySelectorAll(".card").forEach(c => c.onclick = () => openSerie(+c.dataset.id));
+  function stats() {
+    let possedes = 0, doubles = 0, souhaits = 0;
+    for (const r of state.coll.values()) {
+      if (r.quantite > 0) possedes++;
+      doubles += Math.max(r.quantite - 1, 0);
+      if (r.souhait) souhaits++;
+    }
+    return { possedes, doubles, souhaits, niveau: 1 + Math.floor(possedes / 10), prochain: 10 - (possedes % 10) };
+  }
+
+  function renderAccount() {
+    const el = $("account");
+    if (!state.user) { el.innerHTML = `<button class="btn" id="loginBtn">Connexion</button>`; $("loginBtn").onclick = () => openAuth("login"); return; }
+    const s = stats();
+    el.innerHTML = `<span class="level" title="Encore ${s.prochain} tome(s) pour le niveau suivant">Niv. ${s.niveau}</span>
+      <span class="pseudo">${esc(state.profile?.pseudo ?? "…")}</span>
+      <button class="btn ghost" id="logoutBtn">Déconnexion</button>`;
+    $("logoutBtn").onclick = async () => { await db.auth.signOut(); };
+  }
+
+  let mode = "login";
+  function openAuth(m) {
+    mode = m;
+    document.querySelectorAll("#auth .tabs button").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
+    $("aPseudo").hidden = m !== "signup"; $("aPseudo").required = m === "signup";
+    $("aSubmit").textContent = m === "signup" ? "Créer mon compte" : "Se connecter";
+    $("aPass").autocomplete = m === "signup" ? "new-password" : "current-password";
+    $("aErr").textContent = "";
+    if (!$("auth").open) $("auth").showModal();
+  }
+  document.querySelectorAll("#auth .tabs button").forEach(b => b.onclick = () => openAuth(b.dataset.mode));
+  $("aClose").onclick = () => $("auth").close();
+  $("authForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    $("aErr").textContent = "";
+    const email = $("aEmail").value.trim(), password = $("aPass").value;
+    if (mode === "signup") {
+      const pseudo = $("aPseudo").value.trim();
+      const { data: pris } = await db.from("profiles").select("id").ilike("pseudo", pseudo).maybeSingle();
+      if (pris) { $("aErr").textContent = "Ce pseudo est déjà pris."; return; }
+      const { data, error } = await db.auth.signUp({ email, password, options: { data: { pseudo }, emailRedirectTo: location.href } });
+      if (error) { $("aErr").textContent = error.message; return; }
+      $("auth").close();
+      if (!data.session) say("Compte créé ! Clique sur le lien reçu par e-mail pour l'activer, puis connecte-toi.");
+    } else {
+      const { error } = await db.auth.signInWithPassword({ email, password });
+      if (error) { $("aErr").textContent = "E-mail ou mot de passe incorrect."; return; }
+      $("auth").close();
+    }
+  });
+  db.auth.onAuthStateChange(() => { loadUser().then(render); });
+
+  // ---------- Collection ----------
+  async function setEntry(volumeId, patch) {
+    if (!state.user) { openAuth("login"); say("Connecte-toi pour remplir ta collection."); return; }
+    const cur = state.coll.get(volumeId) ?? { volume_id: volumeId, quantite: 0, souhait: false };
+    const next = { ...cur, ...patch };
+    next.quantite = Math.max(0, Math.min(99, next.quantite));
+    if (next.quantite > 0) next.souhait = false; // on l'a : il sort de la liste de souhaits
+    const { error } = (next.quantite === 0 && !next.souhait)
+      ? await db.from("collection").delete().eq("volume_id", volumeId).eq("user_id", state.user.id)
+      : await db.from("collection").upsert({ user_id: state.user.id, volume_id: volumeId, quantite: next.quantite,
+          souhait: next.souhait, updated_at: new Date().toISOString() }, { onConflict: "user_id,volume_id" });
+    if (error) { say("Erreur : " + error.message); return; }
+    if (next.quantite === 0 && !next.souhait) state.coll.delete(volumeId); else state.coll.set(volumeId, next);
+    renderAccount(); render();
+  }
+
+  // ---------- Données ----------
+  async function loadSeries() {
+    const { data, error } = await db.from("series").select("*, volumes(count)").order("titre");
+    if (error) { say("Erreur : " + error.message); return; }
+    state.series = data;
+  }
+
+  async function searchOnline(text) {
+    const digits = text.replace(/[^0-9]/g, "");
+    const body = digits.length === 13 ? { isbn: digits } : { q: text };
+    say(digits.length === 13 ? "Recherche de cet ISBN…" : `Recherche de « ${text} » chez les éditeurs…`);
+    try {
+      const r = await fetch(`${URL_SB}/functions/v1/recherche`, { method: "POST",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const res = await r.json();
+      if (res.error) { say(res.error); return; }
+      await loadSeries();
+      if (!res.series?.length) { say("Rien trouvé, même chez les éditeurs. Vérifie l'orthographe ou essaie l'ISBN."); return; }
+      if (body.isbn) { say(res.source === "ajout" ? "Série ajoutée au catalogue !" : ""); return openSerie(res.series[0]); }
+      say(res.source === "ajout" ? `${res.series.length} série(s) trouvée(s) — elles sont maintenant dans le catalogue pour tout le monde.` : "");
+      state.view = "catalogue"; state.filterIds = new Set(res.series); render();
+    } catch (e) { say("La recherche en ligne n'a pas répondu, réessaie dans un instant."); }
+  }
+
+  // ---------- Affichage ----------
+  function say(t) { notice.textContent = t || ""; }
+
+  function serieCard(s) {
+    const n = s.volumes[0]?.count ?? 0, total = s.nb_tomes || n || 1;
+    return `<div class="card" data-id="${s.id}">
+      <h2>${esc(s.titre)}</h2>
+      <div class="meta">${esc(s.edition ?? "")}${s.edition ? " · " : ""}${esc(s.editeur ?? "")}</div>
+      <div class="meta">${n} / ${s.nb_tomes ?? "?"} tomes référencés</div>
+      <div class="progress"><i style="width:${Math.min(100, n / total * 100)}%"></i></div></div>`;
+  }
+  function bindCards() { app.querySelectorAll(".card").forEach(c => c.onclick = () => openSerie(+c.dataset.id)); }
+
+  function renderCatalogue() {
+    const f = q.value.trim().toLowerCase();
+    let list = state.series;
+    if (state.filterIds) list = list.filter(s => state.filterIds.has(s.id));
+    else if (f && !/^\d{13}$/.test(f.replace(/[^0-9]/g, ""))) list = list.filter(s => `${s.titre} ${s.edition ?? ""} ${s.editeur ?? ""}`.toLowerCase().includes(f));
+    app.innerHTML = list.length ? `<div class="series">${list.map(serieCard).join("")}</div>`
+      : `<p class="empty">Pas encore sur le site. Appuie sur <b>Chercher</b> : je vais la trouver chez les éditeurs et l'ajouter.</p>`;
+    bindCards();
+  }
+
+  function volCell(v, num) {
+    if (!v) return `<div class="vol missing"><div class="cover">${num}</div><div class="info">Tome ${num}<br><span class="isbn">ISBN manquant</span></div></div>`;
+    const e = state.coll.get(v.id) ?? { quantite: 0, souhait: false };
+    const img = v.couverture_url || `https://covers.openlibrary.org/b/isbn/${v.isbn13}-M.jpg?default=false`;
+    const badge = e.quantite > 1 ? `<span class="badge dbl">${e.quantite - 1} double${e.quantite > 2 ? "s" : ""}</span>`
+      : e.quantite === 1 ? `<span class="badge">✓</span>` : "";
+    const own = e.quantite > 0
+      ? `<div class="qty"><button data-a="minus" title="Retirer un exemplaire">−</button><span>×${e.quantite}</span><button data-a="plus" title="Ajouter un exemplaire (double)">+</button></div>`
+      : `<button data-a="own">✓ Je l'ai</button>`;
+    const wish = e.quantite > 0 ? "" : `<button data-a="wish" class="${e.souhait ? "on-wish" : ""}" title="Liste de souhaits">${e.souhait ? "♥" : "♡"}</button>`;
+    return `<div class="vol ${e.quantite > 0 ? "owned" : e.souhait ? "wished" : ""}" data-vid="${v.id}">
+      <div class="cover"><img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">${badge}</div>
+      <div class="info">Tome ${v.numero}<br><span class="isbn">${esc(v.isbn13 ?? "")}</span></div>
+      <div class="actions">${own}${wish}</div></div>`;
+  }
+
+  function bindVols(vols) {
+    app.querySelectorAll(".vol[data-vid]").forEach(el => {
+      const id = +el.dataset.vid;
+      el.querySelectorAll("button[data-a]").forEach(b => b.onclick = () => {
+        const e = state.coll.get(id) ?? { quantite: 0, souhait: false };
+        if (b.dataset.a === "own") setEntry(id, { quantite: 1 });
+        if (b.dataset.a === "plus") setEntry(id, { quantite: e.quantite + 1 });
+        if (b.dataset.a === "minus") setEntry(id, { quantite: e.quantite - 1 });
+        if (b.dataset.a === "wish") setEntry(id, { souhait: !e.souhait });
+      });
+    });
   }
 
   async function openSerie(id) {
-    const s = series.find(x => x.id === id);
+    state.view = "serie"; state.serie = id; state.filterIds = null;
+    const s = state.series.find(x => x.id === id) ?? (await db.from("series").select("*, volumes(count)").eq("id", id).single()).data;
     const { data: vols } = await db.from("volumes").select("*").eq("serie_id", id).order("numero");
-    const byNum = Object.fromEntries((vols ?? []).map(v => [v.numero, v]));
-    const max = Math.max(s.nb_tomes ?? 0, ...(vols ?? []).map(v => v.numero), 0);
-    const cells = Array.from({ length: max }, (_, i) => {
-      const v = byNum[i + 1];
-      if (!v) return `<div class="vol missing"><div class="cover">${i + 1}</div><div class="info">Tome ${i + 1}<br><span class="isbn">ISBN manquant</span></div></div>`;
-      const img = v.couverture_url || `https://covers.openlibrary.org/b/isbn/${v.isbn13}-M.jpg?default=false`;
-      return `<div class="vol"><div class="cover"><img src="${esc(img)}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('${v.numero}'))"></div>
-        <div class="info">Tome ${v.numero}<br><span class="isbn">${esc(v.isbn13 ?? "")}</span></div></div>`;
-    }).join("");
-    app.innerHTML = `<button class="back">← Toutes les séries</button>
-      <h2 style="font-family:'Bebas Neue';font-size:40px;margin:0">${esc(s.titre)}</h2>
-      <div class="meta">${esc(s.edition ?? "")} · ${esc(s.editeur ?? "")} · ${esc(s.auteur ?? "")}</div>
-      <div class="vols">${cells}</div>`;
-    app.querySelector(".back").onclick = () => renderList(q.value);
+    state.vols = vols ?? [];
+    const byNum = Object.fromEntries(state.vols.map(v => [v.numero, v]));
+    const max = Math.max(s.nb_tomes ?? 0, ...state.vols.map(v => v.numero), 0);
+    const owned = state.vols.filter(v => (state.coll.get(v.id)?.quantite ?? 0) > 0).length;
+    app.innerHTML = `<button class="back">← Retour</button>
+      <div class="title-row"><div>
+        <h2 style="font-family:'Bebas Neue';font-size:40px;margin:0">${esc(s.titre)}</h2>
+        <div class="meta">${[s.edition, s.editeur, s.auteur].filter(Boolean).map(esc).join(" · ")}</div>
+        ${state.user ? `<div class="meta">Tu as ${owned} tome(s) sur ${max}</div>` : ""}
+      </div>${state.user && state.vols.length ? `<button class="btn ghost" id="allBtn">J'ai toute la série</button>` : ""}</div>
+      <div class="vols">${Array.from({ length: max }, (_, i) => volCell(byNum[i + 1], i + 1)).join("")}</div>`;
+    app.querySelector(".back").onclick = () => { state.view = "catalogue"; render(); };
+    const all = $("allBtn");
+    if (all) all.onclick = async () => {
+      const rows = state.vols.filter(v => !(state.coll.get(v.id)?.quantite > 0))
+        .map(v => ({ user_id: state.user.id, volume_id: v.id, quantite: 1, souhait: false }));
+      if (!rows.length) return;
+      const { error } = await db.from("collection").upsert(rows, { onConflict: "user_id,volume_id" });
+      if (error) return say("Erreur : " + error.message);
+      rows.forEach(r => state.coll.set(r.volume_id, r)); renderAccount(); render();
+    };
+    bindVols();
+    setNav();
   }
 
-  q.addEventListener("input", async () => {
-    const v = q.value.trim(), digits = v.replace(/[^0-9]/g, "");
-    if (digits.length === 13) {
-      const { data } = await db.from("volumes").select("serie_id").eq("isbn13", digits).maybeSingle();
-      if (data) return openSerie(data.serie_id);
+  async function renderMine(kind) {
+    if (!state.user) { app.innerHTML = `<p class="empty">Connecte-toi pour voir ${kind === "souhaits" ? "ta liste de souhaits" : "ta collection"}.</p>`; return; }
+    const ids = [...state.coll.values()].filter(r => kind === "souhaits" ? r.souhait : r.quantite > 0).map(r => r.volume_id);
+    const s = stats();
+    const head = kind === "collection" ? `<div class="stats">
+      <div class="stat"><b>${s.possedes}</b>tomes</div><div class="stat"><b>${s.doubles}</b>doubles</div>
+      <div class="stat"><b>Niv. ${s.niveau}</b>encore ${s.prochain} tome(s)</div></div>` : "";
+    if (!ids.length) { app.innerHTML = head + `<p class="empty">${kind === "souhaits" ? "Ta liste de souhaits est vide. Ajoute des tomes avec ♡." : "Ta collection est vide. Ouvre une série et appuie sur « ✓ Je l'ai »."}</p>`; return; }
+    const { data: vols } = await db.from("volumes").select("*, series(id, titre, edition, editeur)").in("id", ids).order("numero");
+    const parSerie = new Map();
+    (vols ?? []).forEach(v => parSerie.set(v.series.id, [...(parSerie.get(v.series.id) ?? []), v]));
+    app.innerHTML = head + [...parSerie.values()].map(vs => `
+      <h2 style="font-family:'Bebas Neue';font-size:28px;margin:24px 0 0;cursor:pointer" data-sid="${vs[0].series.id}">${esc(vs[0].series.titre)}
+        <span class="meta" style="font-family:Inter;font-size:14px">${esc(vs[0].series.edition ?? "")} · ${vs.length} tome(s)</span></h2>
+      <div class="vols">${vs.map(v => volCell(v, v.numero)).join("")}</div>`).join("");
+    app.querySelectorAll("h2[data-sid]").forEach(h => h.onclick = () => openSerie(+h.dataset.sid));
+    bindVols();
+  }
+
+  function setNav() { document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.view === state.view)); }
+
+  function render() {
+    setNav();
+    if (state.view === "serie") return openSerie(state.serie);
+    if (state.view === "collection" || state.view === "souhaits") return renderMine(state.view);
+    renderCatalogue();
+  }
+
+  // ---------- Événements ----------
+  document.querySelectorAll("#nav button").forEach(b => b.onclick = () => { state.view = b.dataset.view; state.filterIds = null; say(""); render(); });
+  $("home").onclick = () => { state.view = "catalogue"; state.filterIds = null; q.value = ""; say(""); render(); };
+  q.addEventListener("input", () => { state.filterIds = null; if (state.view !== "catalogue") state.view = "catalogue"; say(""); renderCatalogue(); setNav(); });
+  $("searchForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const t = q.value.trim();
+    if (t.length < 3) return say("Tape au moins 3 caractères.");
+    const digits = t.replace(/[^0-9]/g, "");
+    if (digits.length !== 13) {
+      const local = state.series.filter(s => `${s.titre} ${s.edition ?? ""}`.toLowerCase().includes(t.toLowerCase()));
+      if (local.length) say(`${local.length} série(s) déjà sur le site. Je cherche aussi d'autres éditions…`);
     }
-    renderList(v);
+    searchOnline(t);
   });
 
-  load();
+  await loadSeries();
+  await loadUser();
+  render();
 </script>
 </body>
 </html>
