@@ -5,6 +5,7 @@ Site de collectionneur manga : catalogue des séries réelles avec les ISBN de c
 - **Site** : `index.html` (GitHub Pages), lit la base Supabase en lecture seule.
 - **Base** : Supabase, projet `isekai-collection` (tables `series` et `volumes`, voir `supabase/schema.sql`).
 - **Recherche à la volée** : `supabase/functions/recherche` (fonction Supabase). Si une série ou un ISBN n'est pas encore dans la base, elle le cherche sur Google Books / Open Library et l'ajoute pour tout le monde.
+- **International** : chaque série a la langue de son édition (FR, EN, DE…) ; le site propose un filtre par langue d'édition et l'interface existe en français et en anglais (`I18N` dans `index.html` pour ajouter une langue).
 - **Comptes et collection** : connexion par e-mail, pseudo et niveau (1 niveau tous les 10 tomes), pour chaque tome « je l'ai », nombre d'exemplaires (doubles) et liste de souhaits.
 - **Import des ISBN en masse** : `scripts/import_isbn.py`, qui lit le site de l’éditeur (Glénat), Google Books ou le catalogue BnF.
 

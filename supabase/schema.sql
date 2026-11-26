@@ -82,3 +82,8 @@ select user_id,
        count(*) filter (where souhait) as souhaits,
        1 + count(*) filter (where quantite > 0) / 10 as niveau
 from public.collection group by user_id;
+
+-- ===== Langue des éditions (migration « langue_des_editions ») =====
+-- fr, en, de, it, es, ja… : sert au filtre « Langue de l'édition » du site.
+alter table public.series add column if not exists langue text not null default 'fr';
+create index if not exists series_langue_idx on public.series (langue);
