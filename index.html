@@ -1010,7 +1010,7 @@
       if (normaux.length || !vs.length) html += `<div class="ed"><button class="ed-head" data-serie="${s.id}">
           <div class="t">${esc(nomEd)} • ${esc(s.editeur ?? "—")}<span class="chev">›</span></div>
           <div class="s">${[t("nParus", normaux.length), statut, (s.langue || "fr").toUpperCase()].filter(Boolean).map(esc).join(" • ")}</div></button>
-        ${normaux.length ? `<div class="row">${normaux.map(v => tile(v, s)).join("")}</div>` : ""}</div>`;
+        ${normaux.length ? `<div class="row" data-row="${s.id}-n">${normaux.map(v => tile(v, s)).join("")}</div>` : ""}</div>`;
       // une rangée par type d'édition spéciale (collector, jaquettes, premier tirage…)
       for (const g of ["collector", "limitee", "premier_tirage", "jaquette_alt", "jaquette_coffret_dvd", "autre"]) {
         const sp = vs.filter(v => v.variante === g);
@@ -1018,13 +1018,16 @@
         html += `<div class="ed"><button class="ed-head" data-serie="${s.id}">
             <div class="t">${esc(t("groupes")[g])} • ${esc(s.editeur ?? "—")}<span class="chev">›</span></div>
             <div class="s">${esc(t("nParus", sp.length))} • ${esc(t("linked", nomEd))}</div></button>
-          <div class="row">${sp.map(v => tile(v, s)).join("")}</div></div>`;
+          <div class="row" data-row="${s.id}-${g}">${sp.map(v => tile(v, s)).join("")}</div></div>`;
       }
       return html;
     };
     const visibles = toutes.filter(e => state.editionLangs.has(e.langue || "fr"));
     const autres = toutes.filter(e => !state.editionLangs.has(e.langue || "fr"));
     const html1 = visibles.map(blocEdition).join("");
+    const positions = first ? {} : Object.fromEntries([...app.querySelectorAll(".row[data-row]")].map(r => [r.dataset.row, r.scrollLeft]));
+    const ouverts = first ? false : !!app.querySelector("details.autres[open]");
+    const hauteur = window.scrollY;
     const html2 = autres.length ? `<details class="autres"><summary>${t("otherLangs", autres.length)}</summary>${autres.map(blocEdition).join("")}</details>` : "";
 
     app.innerHTML = `<button class="back">${t("back")}</button>
@@ -1035,7 +1038,7 @@
       ${auteurs.length ? `<div class="block"><h3>${auteurs.length > 1 ? t("authors") : t("author")}</h3>
         ${auteurs.map(a => `<div class="person"><div><b>${esc(a)}</b><div class="meta">${t("author")}</div></div></div>`).join("")}</div>` : ""}
       <div class="block"><h3>${t("editions")}</h3>${html1}${html2}</div>
-      ${coffrets.length ? `<div class="block"><h3>${t("boxes")}</h3><div class="row">${coffrets.map(([v, s]) => tile(v, s, true)).join("")}</div></div>` : ""}
+      ${coffrets.length ? `<div class="block"><h3>${t("boxes")}</h3><div class="row" data-row="coffrets">${coffrets.map(([v, s]) => tile(v, s, true)).join("")}</div></div>` : ""}
       <p style="margin-top:22px"><button class="btn ghost" id="addSpecialBtn">${t("addSpecial")}</button></p>`;
 
     app.querySelector(".back").onclick = () => { state.view = "catalogue"; render(); };
@@ -1052,6 +1055,11 @@
       };
       el.onkeydown = ev => { if (ev.key === "Enter") ouvrirTome(v); };
     });
+    if (!first) {
+      app.querySelectorAll(".row[data-row]").forEach(r => { if (positions[r.dataset.row]) r.scrollLeft = positions[r.dataset.row]; });
+      if (ouverts) app.querySelector("details.autres")?.setAttribute("open", "");
+      window.scrollTo({ top: hauteur });
+    }
     const max = Math.max(1, ...(vols ?? []).filter(v => v.serie_id === s0.id && !v.variante).map(v => v.numero));
     $("addSpecialBtn").onclick = () => openAjout({ mode: "variante", serie: s0, numero: 1, max });
     setNav();
