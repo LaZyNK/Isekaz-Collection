@@ -17,7 +17,28 @@ const json = (data: unknown, status = 200) =>
 
 type Tome = { titre: string; edition: string | null; editeur: string; auteur: string | null; langue: string;
               numero: number; isbn13: string; date: string | null; couverture: string | null;
-              description?: string | null; prix?: number | null; devise?: string | null };
+              description?: string | null; prix?: number | null; devise?: string | null;
+              variante?: string | null; variante_nom?: string | null; public?: string | null };
+
+// Public visé (shōnen…) d'après les catégories / collections
+function publicDe(txt: string): string | null {
+  const t = txt.toLowerCase();
+  if (/sh[oōô]u?jo/.test(t)) return "shojo";
+  if (/josei/.test(t)) return "josei";
+  if (/seinen/.test(t)) return "seinen";
+  if (/kodomo/.test(t)) return "kodomo";
+  if (/sh[oōô]u?nen/.test(t)) return "shonen";
+  return null;
+}
+// Édition collector / limitée : c'est une édition spéciale du même tome, pas une autre série
+const COLLECTOR = /\s*[-–:(]?\s*(?:[ée]dition\s+)?(collector|limit[ée]e|limited edition|sammelband|edizione limitata)\)?/i;
+function sansCollector(t: { titre: string; edition: string | null }) {
+  const full = `${t.titre} ${t.edition ?? ""}`;
+  const m = full.match(COLLECTOR);
+  if (!m) return { variante: null, variante_nom: null, edition: t.edition };
+  const edition = t.edition ? clean(t.edition.replace(COLLECTOR, " ")).replace(/^[-–:\s]+|[-–:\s]+$/g, "") || null : null;
+  return { variante: /limit/i.test(m[1]) ? "limitee" : "collector", variante_nom: clean(m[0].replace(/^[-–:(\s]+|\)$/g, "")), edition };
+}
 
 const clean = (s: string) => s.replace(/\s+/g, " ").trim();
 // Langue probable d'après le groupe de l'ISBN (si Google ne la donne pas)
@@ -111,7 +132,8 @@ async function google(q: string, start = 0): Promise<Tome[]> {
     if (!isbn || !/^97[89]\d{10}$/.test(isbn)) continue;
     const t = analyseTitre(clean(`${vi.title ?? ""} ${vi.subtitle ? "- " + vi.subtitle : ""}`)) ?? analyseTitre(vi.title ?? "");
     if (!t) continue;
-    out.push({ ...t, editeur: editeurPropre(vi.publisher ?? INCONNU), auteur: vi.authors?.[0] ?? null,
+    out.push({ ...t, ...sansCollector(t), public: publicDe((vi.categories ?? []).join(" ")),
+      editeur: editeurPropre(vi.publisher ?? INCONNU), auteur: vi.authors?.[0] ?? null,
       langue: (vi.language || langueIsbn(isbn)).slice(0, 2),
       isbn13: isbn, date: /^\d{4}-\d{2}-\d{2}$/.test(vi.publishedDate ?? "") ? vi.publishedDate : null,
       couverture: vi.imageLinks?.thumbnail?.replace("http://", "https://") ?? null,
@@ -148,20 +170,24 @@ async function enregistrer(tomes: Tome[]): Promise<number[]> {
     let id = found?.[0]?.id;
     if (!id) {
       const { data, error } = await db.from("series")
-        .insert({ titre: s.titre, edition: s.edition, editeur: s.editeur, auteur: s.auteur, langue: s.langue, source: "recherche" })
+        .insert({ titre: s.titre, edition: s.edition, editeur: s.editeur, auteur: s.auteur, langue: s.langue, source: "recherche",
+                  public: g.map((x) => x.public).find(Boolean) ?? null })
         .select("id").single();
       if (error) { console.log("serie", error.message); continue; }
       id = data.id;
     }
     ids.push(id);
-    const { data: deja } = await db.from("volumes").select("numero").eq("serie_id", id);
-    const pris = new Set((deja ?? []).map((v: any) => v.numero));
+    const { data: deja } = await db.from("volumes").select("numero, variante, variante_nom").eq("serie_id", id);
+    const cle = (n: number, v?: string | null, vn?: string | null) => `${n}|${v ?? ""}|${(vn ?? "").toLowerCase()}`;
+    const pris = new Set((deja ?? []).map((v: any) => cle(v.numero, v.variante, v.variante_nom)));
     const lignes = [];
     for (const t of g.sort((a, b) => a.numero - b.numero)) {
-      if (pris.has(t.numero)) continue;
-      pris.add(t.numero);
+      const k = cle(t.numero, t.variante, t.variante_nom);
+      if (pris.has(k)) continue;
+      pris.add(k);
       lignes.push({ serie_id: id, numero: t.numero, isbn13: t.isbn13, date_parution: t.date, couverture_url: t.couverture,
-        description: t.description ?? null, prix: t.prix ?? null, devise: t.devise ?? null });
+        description: t.description ?? null, prix: t.prix ?? null, devise: t.devise ?? null,
+        variante: t.variante ?? null, variante_nom: t.variante_nom ?? null });
     }
     // un par un : un ISBN déjà connu ailleurs ne bloque pas les autres
     for (const l of lignes) await db.from("volumes").insert(l);
@@ -213,11 +239,8 @@ Deno.serve(async (req) => {
     if (!v) {
       // le numéro existe déjà avec un autre ISBN (réimpression, tirage spécial…) : rangé à part pour ne pas le perdre
       const t = (await google(`isbn:${fiche}`)).find((x) => x.isbn13 === fiche);
-      if (t) {
-        const ed = `${t.edition ? t.edition + " - " : ""}Autres tirages (à vérifier)`;
-        await enregistrer([{ ...t, edition: ed }]);
-        v = await lireTome(fiche);
-      }
+      if (t) await enregistrer([{ ...t, variante: t.variante ?? "autre", variante_nom: t.variante_nom ?? "Autre tirage (à vérifier)" }]);
+      v = await lireTome(fiche);
     }
     if (!v) return json({ volume: null, source: "introuvable" });
     if (!v.fiche_maj) {

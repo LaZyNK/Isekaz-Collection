@@ -47,7 +47,18 @@ EDITEURS = {
     "Dupuis": ("Dupuis", False), "Bamboo": ("Bamboo", False), "Mana Books": ("Mana books", False),
 }
 MANGA_MOTS = re.compile(r"manga|sh[oōô]nen|shounen|seinen|sh[oōô]jo|shoujo|josei|kodomo|webtoon|manhwa|manhua|ki-oon|tonkam|kurokawa", re.I)
-COFFRET = re.compile(r"coffret|pack|lot de|bo[iî]te|étui", re.I)
+COLLECTOR = re.compile(r"collector|[ée]dition limit[ée]e|tirage limit[ée]", re.I)
+STARTER = re.compile(r"starter|pack d[ée]couverte|kit de d[ée]marrage", re.I)
+BUNDLE = re.compile(r"bundle|pack\b|lot de", re.I)
+COFFRET = re.compile(r"coffret|bo[iî]te|[ée]tui", re.I)
+
+
+def public_de(txt: str):
+    t = txt.lower()
+    for mot, val in ((r"sh[oōô]u?jo", "shojo"), (r"josei", "josei"), (r"seinen", "seinen"), (r"kodomo", "kodomo"), (r"sh[oōô]u?nen", "shonen")):
+        if re.search(mot, t):
+            return val
+    return None
 
 
 def norm(t: str) -> str:
@@ -98,7 +109,7 @@ def numero(txt: str):
 
 def analyse(rec):
     """Transforme une notice UNIMARC en tome, ou None si ce n'est pas exploitable."""
-    f = {t: sf(rec, t) for t in ("010", "101", "200", "210", "214", "215", "225", "410", "461", "606", "608", "700")}
+    f = {t: sf(rec, t) for t in ("010", "101", "200", "205", "210", "214", "215", "225", "410", "461", "606", "608", "700")}
     isbn = next((i for x in f["010"] for i in map(isbn13, x.get("a", [])) if i), None)
     if not isbn:
         return None
@@ -117,9 +128,26 @@ def analyse(rec):
                     break
             if n:
                 break
+    # coffrets, starters, bundles, collectors : éditions spéciales rattachées au tome
+    texte = f"{titre} {sous} {premier(f['205'], 'a')}"
+    variante = contenu = None
+    if STARTER.search(texte):
+        variante = "starter"
+    elif BUNDLE.search(texte):
+        variante = "bundle"
+    elif COFFRET.search(texte):
+        variante = "coffret"
+    elif COLLECTOR.search(texte):
+        variante = "limitee" if re.search(r"limit", texte, re.I) else "collector"
+    if variante in ("starter", "bundle", "coffret"):
+        m = re.search(r"(?:tomes?|vol(?:umes?)?\.?|t\.)\s*(\d{1,3})\s*(?:[àa\-–]|et)\s*(\d{1,3})", texte, re.I)
+        if m:
+            n = n or int(m.group(1))
+            contenu = f"Tomes {int(m.group(1))} à {int(m.group(2))}"
+        if not serie:  # « Coffret One Piece » sans série identifiée
+            serie = re.sub(r"(?i)^(coffret|starter( pack)?|pack|bundle)\s*[:-]?\s*", "", titre).split(" - ")[0]
+        n = n or 1
     if not n or not serie:
-        return None
-    if COFFRET.search(f"{titre} {sous}"):
         return None
     langue = premier(f["101"], "a")
     taille = ""
@@ -145,6 +173,8 @@ def analyse(rec):
         if auteur:
             break
     return {"isbn13": isbn, "numero": n, "serie": propre(serie), "titre_tome": propre(nom_tome) or None,
+            "variante": variante, "variante_nom": propre(sous or premier(f["205"], "a") or titre)[:120] if variante else None, "contenu": contenu,
+            "public": public_de(f"{titre} " + " ".join(v for tag in ("225", "410", "461", "606", "608") for x in f[tag] for vals in x.values() for v in vals)),
             "langue": langue, "taille": taille, "prix": prix, "annee": annee, "genre": genre, "auteur": auteur or None}
 
 
@@ -201,12 +231,13 @@ class Base:
                 start += 1000
         print(f"   base actuelle : {len(self.series)} séries, {len(self.isbns)} ISBN")
 
-    def serie(self, titre, editeur, edition, auteur):
+    def serie(self, titre, editeur, edition, auteur, public=None):
         k = (norm(titre), norm(editeur), norm(edition or ""))
         if k in self.series:
             return self.series[k]
         r = requests.post(f"{self.u}/series", headers={**self.h, "Prefer": "return=representation"}, timeout=60,
-                          json={"titre": titre, "edition": edition, "editeur": editeur, "auteur": auteur, "langue": "fr", "source": "bnf"})
+                          json={"titre": titre, "edition": edition, "editeur": editeur, "auteur": auteur, "langue": "fr", "source": "bnf",
+                                "public": public})
         if r.status_code >= 300:
             print(f"      ❌ série {titre} : {r.text[:200]}")
             return None
@@ -214,8 +245,9 @@ class Base:
         return self.series[k]
 
     def numeros_pris(self, sid):
-        r = requests.get(f"{self.u}/volumes", headers=self.h, params={"serie_id": f"eq.{sid}", "select": "numero"}, timeout=60)
-        return {x["numero"] for x in r.json()} if r.ok else set()
+        r = requests.get(f"{self.u}/volumes", headers=self.h, timeout=60,
+                         params={"serie_id": f"eq.{sid}", "select": "numero,variante,variante_nom"})
+        return {(x["numero"], x["variante"], (x["variante_nom"] or "").lower()) for x in r.json()} if r.ok else set()
 
     def tomes(self, rows):
         for i in range(0, len(rows), 500):
@@ -278,24 +310,28 @@ def main():
             for taille, liste in formats.items():
                 titre = max((x["serie"] for x in liste), key=lambda s: sum(c.isupper() for c in s))
                 edition = f"Format {taille} cm" if plusieurs and taille else None
-                # un ISBN par numéro : la notice la plus récente (tirage actuel)
+                # un ISBN par numéro (et par édition spéciale) : la notice la plus récente (tirage actuel)
                 choix = {}
                 for x in sorted(liste, key=lambda x: x["annee"] or ""):
-                    choix[x["numero"]] = x
+                    choix[(x["numero"], x["variante"], (x["variante_nom"] or "").lower())] = x
                 bilan["series"].add((titre, nom, edition))
                 bilan["tomes"] += len(choix)
                 if a.dry_run:
-                    nums = sorted(choix)
-                    print(f"   • {titre}{' — ' + edition if edition else ''} : {len(nums)} tome(s) "
-                          f"[{nums[0]}…{nums[-1]}]{' ex. ' + choix[nums[0]]['isbn13'] if nums else ''}")
+                    std = sorted(k[0] for k in choix if not k[1])
+                    spe = [f"{k[1]} n°{k[0]}" for k in choix if k[1]]
+                    pub = next((x["public"] for x in liste if x["public"]), None)
+                    print(f"   • {titre}{' — ' + edition if edition else ''}{' [' + pub + ']' if pub else ''} : {len(std)} tome(s)"
+                          + (f" [{std[0]}…{std[-1]}]" if std else "") + (f" + {len(spe)} spéciale(s) : {', '.join(spe[:4])}" if spe else ""))
                     continue
-                sid = base.serie(titre, nom, edition, next((x["auteur"] for x in liste if x["auteur"]), None))
+                sid = base.serie(titre, nom, edition, next((x["auteur"] for x in liste if x["auteur"]), None),
+                                 next((x["public"] for x in liste if x["public"]), None))
                 if not sid:
                     continue
                 pris = base.numeros_pris(sid)
                 rows = [{"serie_id": sid, "numero": x["numero"], "isbn13": x["isbn13"], "titre": x["titre_tome"],
-                         "prix": x["prix"], "devise": "EUR" if x["prix"] else None}
-                        for x in choix.values() if x["isbn13"] not in base.isbns and x["numero"] not in pris]
+                         "prix": x["prix"], "devise": "EUR" if x["prix"] else None,
+                         "variante": x["variante"], "variante_nom": x["variante_nom"], "contenu": x["contenu"]}
+                        for k, x in choix.items() if x["isbn13"] not in base.isbns and k not in pris]
                 if rows:
                     base.tomes(rows)
                     base.isbns.update(r["isbn13"] for r in rows)

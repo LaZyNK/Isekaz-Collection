@@ -93,3 +93,20 @@ alter table public.volumes add column if not exists description text;
 alter table public.volumes add column if not exists prix numeric(8,2);
 alter table public.volumes add column if not exists devise text;
 alter table public.volumes add column if not exists fiche_maj timestamptz;
+
+-- ===== Types, public, éditions spéciales, ajouts des membres (migration « types_public_editions_speciales ») =====
+alter table public.series add column if not exists type text not null default 'manga'
+  check (type in ('manga','light_novel','artbook','dvd','bluray','vhs','figurine','goodies','jeu_video','cd','autre'));
+alter table public.series add column if not exists public text check (public in ('shonen','seinen','shojo','josei','kodomo'));
+alter table public.series add column if not exists genres text[] not null default '{}';
+alter table public.series add column if not exists ajoute_par uuid references auth.users(id) on delete set null;
+alter table public.volumes add column if not exists variante text
+  check (variante in ('collector','limitee','jaquette_alt','premier_tirage','jaquette_coffret_dvd','coffret','starter','bundle','autre'));
+alter table public.volumes add column if not exists variante_nom text check (char_length(variante_nom) <= 120);
+alter table public.volumes add column if not exists contenu text check (char_length(contenu) <= 200);
+alter table public.volumes add column if not exists photo_url text;
+alter table public.volumes add column if not exists ajoute_par uuid references auth.users(id) on delete set null;
+alter table public.volumes drop constraint if exists volumes_serie_id_numero_key;
+create unique index if not exists volumes_serie_numero_variante_key
+  on public.volumes (serie_id, numero, coalesce(variante, ''), coalesce(variante_nom, ''));
+-- + règles d'ajout pour les membres connectés et stockage « photos » (voir la migration dans Supabase)
