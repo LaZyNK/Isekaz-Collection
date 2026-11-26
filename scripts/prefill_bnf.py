@@ -4,8 +4,7 @@ Isekaz Collection — pré-remplissage du catalogue avec tous les mangas publié
 
 Source : catalogue de la BnF (dépôt légal, API SRU gratuite, sans clé).
 On interroge éditeur par éditeur et année par année, on garde les mangas, on range
-les tomes par série (titre + éditeur + format, pour séparer par ex. l'édition originale
-18 cm de la Perfect Edition 21 cm), un seul ISBN par numéro de tome.
+les tomes par série (titre + éditeur + classe de format : édition normale 16–20 cm, « Grand format » 21–24 cm, « Très grand format » 25 cm et plus), un seul ISBN par numéro de tome.
 Tout ce qui est créé est marqué source = 'bnf' (facile à retirer si besoin).
 Les ISBN déjà présents dans la base ne sont jamais modifiés.
 
@@ -64,6 +63,19 @@ def public_de(txt: str):
 def norm(t: str) -> str:
     t = unicodedata.normalize("NFKD", t or "")
     return re.sub(r"\s+", " ", "".join(c for c in t if not unicodedata.combining(c))).lower().strip(" .,:;-")
+
+
+def cle(t: str) -> str:
+    """Titre comparable : « Mr. Mallow Blue » = « Mr Mallow Blue », « One piece » = « One Piece »."""
+    return re.sub(r"[^a-z0-9]", "", norm(t or ""))
+
+
+def edition_de_taille(taille: str):
+    """Seuils fixes, pour que deux imports donnent toujours la même édition (la BnF note 18 ou 19 cm pour la même série)."""
+    n = int(taille) if taille else 0
+    if not n or 16 <= n <= 20:
+        return None
+    return "Format poche" if n <= 15 else "Grand format" if n <= 24 else "Très grand format"
 
 
 def propre(t: str) -> str:
@@ -182,7 +194,8 @@ def bnf(editeur_bnf: str, annee: int):
     q = f'bib.publisher all "{editeur_bnf}" and bib.doctype any "a" and bib.date any "{annee}"'
     start, total = 1, None
     while total is None or start <= total:
-        for essai in range(4):
+        root = None
+        for essai in range(6):
             try:
                 r = requests.get(SRU, headers=UA, timeout=90, params={"version": "1.2", "operation": "searchRetrieve",
                                  "query": q, "recordSchema": "unimarcxchange", "maximumRecords": PAGE, "startRecord": start})
@@ -190,10 +203,14 @@ def bnf(editeur_bnf: str, annee: int):
                 root = ET.fromstring(r.content)
                 break
             except Exception as e:  # BnF parfois lente : on réessaie
-                print(f"      ⚠️  {e} — nouvel essai")
-                time.sleep(5 * (essai + 1))
-        else:
-            return
+                print(f"      ⚠️  page {start} : {str(e)[:120]} — nouvel essai")
+                time.sleep(15 * (essai + 1))
+        if root is None:  # la BnF refuse toujours : on saute cette page au lieu d'abandonner l'année
+            print(f"      ❌ page {start} abandonnée après 6 essais ({PAGE} notices perdues, relance plus tard)")
+            if total is None:
+                return
+            start += PAGE
+            continue
         total = int(root.findtext("srw:numberOfRecords", "0", NS))
         recs = root.findall(".//srw:recordData/mxc:record", NS)
         for rec in recs:
@@ -223,7 +240,7 @@ class Base:
                 rows = r.json()
                 for x in rows:
                     if table == "series":
-                        self.series[(norm(x["titre"]), norm(x["editeur"] or ""), norm(x["edition"] or ""))] = x["id"]
+                        self.series.setdefault((cle(x["titre"]), norm(x["editeur"] or ""), norm(x["edition"] or "")), x["id"])
                     elif x["isbn13"]:
                         self.isbns.add(x["isbn13"])
                 if len(rows) < 1000:
@@ -232,7 +249,7 @@ class Base:
         print(f"   base actuelle : {len(self.series)} séries, {len(self.isbns)} ISBN")
 
     def serie(self, titre, editeur, edition, auteur, public=None):
-        k = (norm(titre), norm(editeur), norm(edition or ""))
+        k = (cle(titre), norm(editeur), norm(edition or ""))
         if k in self.series:
             return self.series[k]
         r = requests.post(f"{self.u}/series", headers={**self.h, "Prefer": "return=representation"}, timeout=60,
@@ -288,28 +305,37 @@ def main():
         print(f"\n📚 {nom}  ({a.depuis}–{a.jusqua})")
         tomes = {}
         for annee in range(a.depuis, a.jusqua + 1):
-            n_avant = len(tomes)
+            n_avant, vus, rejets = len(tomes), 0, {"illisible": 0, "étranger": 0, "pas manga": 0}
+            exemples = []
             for rec in bnf(cherche, annee):
                 bilan["notices"] += 1
+                vus += 1
                 t = analyse(rec)
-                if not t or (t["langue"] and t["langue"] != "fre"):
+                if not t:
+                    rejets["illisible"] += 1
+                    continue
+                if t["langue"] and t["langue"] != "fre":
+                    rejets["étranger"] += 1
                     continue
                 if not que_manga and not MANGA_MOTS.search(t["genre"]):
+                    rejets["pas manga"] += 1
+                    if len(exemples) < 5:
+                        exemples.append(t["serie"])
                     continue
                 vieux = tomes.get(t["isbn13"])
                 if not vieux or (t["annee"] or "") > (vieux["annee"] or ""):
                     tomes[t["isbn13"]] = t
-            print(f"   {annee} : +{len(tomes) - n_avant} tomes")
+            print(f"   {annee} : {vus} notices → +{len(tomes) - n_avant} tomes  (écartées : "
+                  + ", ".join(f"{k} {v}" for k, v in rejets.items() if v) + ")"
+                  + (f"  ex. pas manga : {', '.join(exemples)}" if a.dry_run and exemples else ""))
 
-        # séries = titre + format ; si une série existe en plusieurs formats, chaque format devient une édition
+        # séries = titre + classe de format (normal / grand format / très grand / poche)
         par_titre = defaultdict(lambda: defaultdict(list))
         for t in tomes.values():
-            par_titre[norm(t["serie"])][t["taille"]].append(t)
+            par_titre[cle(t["serie"])][edition_de_taille(t["taille"])].append(t)
         for formats in par_titre.values():
-            plusieurs = len([f for f in formats if f]) > 1
-            for taille, liste in formats.items():
+            for edition, liste in formats.items():
                 titre = max((x["serie"] for x in liste), key=lambda s: sum(c.isupper() for c in s))
-                edition = f"Format {taille} cm" if plusieurs and taille else None
                 # un ISBN par numéro (et par édition spéciale) : la notice la plus récente (tirage actuel)
                 choix = {}
                 for x in sorted(liste, key=lambda x: x["annee"] or ""):

@@ -214,20 +214,14 @@ async function bnf(q: string): Promise<Tome[]> {
       variante: coll ? (/limit/i.test(texte) ? "limitee" : "collector") : null, variante_nom: coll ? propreT(sous || "Édition collector") : null,
       public: publicDe(genre), taille, description: null, _annee: annee } as any);
   }
-  // une même œuvre dans un autre format (18 cm / 21 cm…) = une autre édition, s'il y a au moins 3 tomes dans ce format
-  const formats = new Map<string, Map<string, number>>();
-  for (const t of out) {
-    const k = `${t.titre.toLowerCase()}|${t.editeur.toLowerCase()}`;
-    const m = formats.get(k) ?? formats.set(k, new Map()).get(k)!;
-    m.set(t.taille, (m.get(t.taille) ?? 0) + 1);
-  }
+  // Format → édition, avec des seuils fixes (comme le script BnF) : 16–20 cm = édition normale,
+  // 21–24 cm = « Grand format » (perfect, deluxe…), 25 cm et plus = « Très grand format », 15 cm et moins = « Format poche ».
+  const editionDeTaille = (x: string) => { const n = +x; return !n ? null : n <= 15 ? "Format poche" : n <= 20 ? null : n <= 24 ? "Grand format" : "Très grand format"; };
   // un ISBN par numéro : la notice la plus récente
   const garde = new Map<string, any>();
   for (const t of out as any[]) {
-    const m = formats.get(`${t.titre.toLowerCase()}|${t.editeur.toLowerCase()}`)!;
-    const principal = [...m.entries()].sort((a, b) => b[1] - a[1])[0][0];
-    t.edition = t.taille && t.taille !== principal && (m.get(t.taille) ?? 0) >= 3 ? `Format ${t.taille} cm` : null;
-    const k = `${t.titre}|${t.editeur}|${t.edition}|${t.numero}|${t.variante ?? ""}`.toLowerCase();
+    t.edition = editionDeTaille(t.taille);
+    const k = `${normT(t.titre)}|${t.editeur}|${t.edition}|${t.numero}|${t.variante ?? ""}`.toLowerCase();
     if (!garde.has(k) || (t._annee ?? "") > (garde.get(k)._annee ?? "")) garde.set(k, t);
   }
   return [...garde.values()].map(({ taille: _t, _annee: _a, ...t }) => t as Tome);
@@ -237,7 +231,7 @@ async function bnf(q: string): Promise<Tome[]> {
 async function enregistrer(tomes: Tome[]): Promise<number[]> {
   const groupes = new Map<string, Tome[]>();
   for (const t of tomes) {
-    const k = `${t.titre.toLowerCase()}|${(t.edition ?? "").toLowerCase()}|${t.editeur.toLowerCase()}|${t.langue}`;
+    const k = `${normT(t.titre)}|${normT(t.edition ?? "")}|${t.editeur.toLowerCase()}|${t.langue}`;
     groupes.set(k, [...(groupes.get(k) ?? []), t]);
   }
   const ids: number[] = [];
