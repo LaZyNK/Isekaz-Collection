@@ -154,7 +154,8 @@ def pick_volumes(notices, titre, edition, nb_tomes):
             # on garde la notice la plus récente (réimpression la plus courante en librairie)
             if (n["annee"] or "") <= (volumes[num]["annee"] or ""):
                 continue
-        volumes[num] = {"numero": num, "isbn13": n["isbns"][0], "annee": n["annee"]}
+        volumes[num] = {"numero": num, "isbn13": n["isbns"][0], "annee": n["annee"],
+                        "info": n["edition"] or n["collection"]}
     return dict(sorted(volumes.items())), doublons
 
 
@@ -201,6 +202,7 @@ def main():
     p.add_argument("--auteur", default=None)
     p.add_argument("--nb-tomes", type=int, default=None)
     p.add_argument("--dry-run", action="store_true", help="affiche le résultat sans rien écrire")
+    p.add_argument("--forcer", action="store_true", help="écrit même si plusieurs ISBN existent pour un tome")
     a = p.parse_args()
 
     print(f"🔎 Recherche BnF : {a.titre} / {a.editeur} {('/ ' + a.edition) if a.edition else ''}")
@@ -217,8 +219,14 @@ def main():
 
     if a.dry_run:
         for v in volumes.values():
-            print(f"   T{v['numero']:>3}  {v['isbn13']}  ({v['annee']})")
+            print(f"   T{v['numero']:>3}  {v['isbn13']}  ({v['annee']})  {v['info']}")
         return
+
+    if doublons and not a.forcer:
+        sys.exit("⛔ Rien n'a été écrit : plusieurs ISBN pour certains tomes, ce qui veut dire que "
+                 "plusieurs éditions sont mélangées. Précise --edition (ou coche « forcer » si tu es sûr).")
+    if not volumes:
+        sys.exit("⛔ Rien n'a été écrit : aucun tome trouvé avec ces critères.")
 
     url, key = os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_SERVICE_KEY")
     if not url or not key:

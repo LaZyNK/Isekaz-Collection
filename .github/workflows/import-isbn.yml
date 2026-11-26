@@ -25,6 +25,10 @@ on:
       dry_run:
         description: "Test à blanc (n'écrit rien dans la base)"
         type: boolean
+        default: true
+      forcer:
+        description: "Forcer l'écriture même si plusieurs ISBN par tome"
+        type: boolean
         default: false
 
 jobs:
@@ -46,9 +50,11 @@ jobs:
           AUTEUR: ${{ inputs.auteur }}
           NB_TOMES: ${{ inputs.nb_tomes }}
           DRY_RUN: ${{ inputs.dry_run }}
+          FORCER: ${{ inputs.forcer }}
         run: |
           args=(--titre "$TITRE" --editeur "$EDITEUR" --edition "$EDITION")
           [ -n "$AUTEUR" ] && args+=(--auteur "$AUTEUR")
           [ -n "$NB_TOMES" ] && args+=(--nb-tomes "$NB_TOMES")
           [ "$DRY_RUN" = "true" ] && args+=(--dry-run)
+          [ "$FORCER" = "true" ] && args+=(--forcer)
           python scripts/import_isbn.py "${args[@]}"
