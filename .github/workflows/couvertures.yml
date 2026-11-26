@@ -1,0 +1,27 @@
+name: Couvertures (Google Books)
+
+on:
+  workflow_dispatch:
+    inputs:
+      series:
+        description: "Nombre maximum de séries à traiter"
+        required: true
+        default: "400"
+  schedule:
+    - cron: "17 9 * * *"   # tous les jours vers 10 h (heure de Paris), juste après la remise à zéro du quota Google (minuit en Californie)
+
+jobs:
+  couvertures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Couvertures
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python scripts/couvertures.py --series "${{ inputs.series || '400' }}"

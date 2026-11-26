@@ -50,6 +50,7 @@ function langueIsbn(isbn: string): string {
   return pref.find(([p]) => isbn.startsWith(p))?.[1] ?? "autre";
 }
 const INCONNU = "Inconnu";
+let quota = false; // Google a refusé (quota du jour épuisé)
 
 // Google ne donne pas toujours l'éditeur : on le retrouve grâce au préfixe éditeur de l'ISBN
 // (ex. 978-2-8116… et 979-10-433… = Pika) en le comparant aux autres tomes trouvés.
@@ -125,7 +126,7 @@ async function google(q: string, start = 0): Promise<Tome[]> {
   if (GOOGLE_KEY) url.searchParams.set("key", GOOGLE_KEY);
   let r = await fetch(url);
   if (r.status >= 500) { await new Promise((ok) => setTimeout(ok, 800)); r = await fetch(url); } // panne passagère : un 2e essai
-  if (!r.ok) { console.log("google", r.status, (await r.text()).slice(0, 120)); return []; }
+  if (!r.ok) { if (r.status === 429) quota = true; console.log("google", r.status, (await r.text()).slice(0, 120)); return []; }
   const items = (await r.json()).items ?? [];
   const out: Tome[] = [];
   for (const it of items) {
@@ -338,6 +339,34 @@ Deno.serve(async (req) => {
       v = await lireTome(fiche);
     }
     return json({ volume: v, source: "base" });
+  }
+
+  // Compléter une série : couvertures, dates exactes, prix, résumés (et tomes manquants) en 1 ou 2 appels Google seulement
+  const completer = Number(body.completer ?? 0);
+  if (completer) {
+    quota = false;
+    const { data: se } = await db.from("series").select("id, titre, editeur, langue").eq("id", completer).maybeSingle();
+    if (!se) return json({ error: "série inconnue" }, 404);
+    const { count: total } = await db.from("volumes").select("id", { count: "exact", head: true }).eq("serie_id", se.id);
+    const cible = `intitle:"${se.titre.replace(/"/g, "")}"${se.editeur && se.editeur !== INCONNU ? ` inpublisher:"${se.editeur.replace(/"/g, "")}"` : ""}`;
+    const pages = [0, ...((total ?? 0) > 35 ? [40] : []), ...((total ?? 0) > 75 ? [80] : [])];
+    let tomes = (await Promise.all(pages.map((st) => google(cible, st)))).flat();
+    if (!tomes.length && se.editeur) tomes = await google(`intitle:"${se.titre.replace(/"/g, "")}"`, 0); // éditeur mal écrit chez Google
+    tomes = sansDoublons(tomes);
+    // les tomes déjà connus sont complétés quel que soit leur titre chez Google ; on n'ajoute que ceux de la même série
+    const infos = tomes.filter((t) => t.couverture || t.date || t.prix || t.description)
+      .map((t) => ({ isbn13: t.isbn13, couverture: t.couverture, date: t.date, prix: t.prix ?? null, devise: t.devise ?? null, description: t.description ?? null }));
+    let completes = 0;
+    for (let i = 0; i < infos.length; i += 200) {
+      const { data } = await db.rpc("completer_volumes", { lignes: infos.slice(i, i + 200) });
+      completes += data ?? 0;
+    }
+    const memes = resoudreEditeurs(tomes).filter((t) => normT(t.titre) === normT(se.titre) && !t.edition
+      && t.editeur.toLowerCase() === (se.editeur ?? "").toLowerCase() && t.langue === se.langue);
+    if (memes.length) await enregistrer(memes);
+    if (quota) return json({ serie: se.id, quota: true }, 429); // on réessaiera demain, sans marquer la série comme faite
+    await db.from("series").update({ couv_maj: new Date().toISOString() }).eq("id", se.id);
+    return json({ serie: se.id, trouves: tomes.length, completes, appels: pages.length });
   }
 
   const isbn = String(body.isbn ?? "").replace(/[^0-9Xx]/g, "");

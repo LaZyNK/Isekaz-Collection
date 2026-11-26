@@ -165,3 +165,7 @@ alter table public.profiles add column if not exists reseaux jsonb not null defa
 alter table public.series add column if not exists titres_alt text[] not null default '{}';
 alter table public.series add column if not exists titres_maj timestamptz;
 create index if not exists series_titres_alt_idx on public.series using gin (titres_alt);
+
+-- ===== Couvertures (migration « series_a_illustrer ») : file des séries à compléter par Google Books, chaque jour =====
+alter table public.series add column if not exists couv_maj timestamptz;
+-- + fonction public.series_a_illustrer(limite) réservée à la clé serveur (voir la migration dans Supabase)

@@ -1525,20 +1525,21 @@
     const deja = store.get("isekaz.completees", {});
     if (Date.now() - (deja[key] ?? 0) < 3 * 864e5) return; // au plus une fois tous les 3 jours par appareil
     const eds = toutes.filter(e => state.editionLangs.has(e.langue || "fr") && (e.type || "manga") === "manga");
-    const incomplete = eds.some(e => {
+    const aFaire = eds.filter(e => {
       const n = (vols ?? []).filter(v => v.serie_id === e.id && !v.variante);
       const max = Math.max(0, ...n.map(v => v.numero));
-      return n.length <= 3 || n.length < max || n.filter(v => !v.couverture_url && !v.photo_url).length > n.length / 2;
-    });
-    if (!eds.length || !incomplete) return;
+      return n.length <= 3 || n.length < max || n.some(v => !v.couverture_url && !v.photo_url);
+    }).slice(0, 4);
+    if (!aFaire.length) return;
     state.completees.add(key);
     deja[key] = Date.now(); store.set("isekaz.completees", Object.fromEntries(Object.entries(deja).slice(-300)));
     const zone = $("completion");
     if (zone) zone.hidden = false;
     try {
-      const r = await fetch(`${URL_SB}/functions/v1/recherche`, { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ q: toutes[0].titre.slice(0, 80) }) });
-      if (!r.ok) return;
+      // une demande ciblée par édition (couvertures, dates, tomes manquants) : bien moins coûteuse qu'une recherche complète
+      const rep = await Promise.all(aFaire.map(e => fetch(`${URL_SB}/functions/v1/recherche`, { method: "POST",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ completer: e.id }) }).catch(() => null)));
+      if (!rep.some(r => r?.ok)) return;
       await loadSeries();
       for (const e of state.series.filter(x => cleOeuvre(x) === key)) mem.delete(e.id);
       if (state.view === "oeuvre" && state.oeuvre === key) openOeuvre(key);
