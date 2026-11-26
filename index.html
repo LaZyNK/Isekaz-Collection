@@ -455,6 +455,40 @@
   }
 
   // Avec du réseau : on enregistre toutes les séries de la collection (et leurs couvertures) pour le hors ligne.
+  // Copie de TOUT le catalogue (sans les descriptions, pour rester léger) : la fiche d'un tome
+  // s'ouvre même sans réseau, qu'on l'ait ou non. Complète une fois par jour, sinon seulement les nouveautés.
+  let syncing = false;
+  async function syncCatalogue() {
+    if (isOffline() || syncing) return;
+    syncing = true;
+    try {
+      const full = Date.now() - store.get("isekaz.catSync", 0) > 864e5;
+      const maxId = full ? 0 : store.get("isekaz.catMaxId", 0);
+      const cols = "id,serie_id,numero,isbn13,date_parution,prix,devise,couverture_url,titre";
+      const rows = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await db.from("volumes").select(cols).gt("id", maxId).order("id").range(from, from + 999);
+        if (error) return;
+        rows.push(...data);
+        if (data.length < 1000) break;
+      }
+      const par = {};
+      rows.forEach(v => (par[v.serie_id] ??= []).push(v));
+      const idx = full ? {} : (await local.get("isbnIndex")) ?? {};
+      for (const [sid, vs] of Object.entries(par)) {
+        const avant = new Map(((await local.get(`vols:${sid}`)) ?? []).map(v => [v.id, v]));
+        // on garde les infos déjà complètes (description…) et on ajoute/actualise le reste
+        vs.forEach(v => avant.set(v.id, { ...(avant.get(v.id) ?? {}), ...v }));
+        const liste = [...avant.values()].filter(v => !full || vs.some(x => x.id === v.id)).sort((a, b) => a.numero - b.numero);
+        await local.set(`vols:${sid}`, liste);
+        liste.forEach(v => { if (v.isbn13) idx[v.isbn13] = +sid; });
+      }
+      await local.set("isbnIndex", idx);
+      if (rows.length) store.set("isekaz.catMaxId", Math.max(maxId, ...rows.map(v => v.id)));
+      if (full) store.set("isekaz.catSync", Date.now());
+    } finally { syncing = false; }
+  }
+
   async function prefetchForOffline() {
     if (!state.user || isOffline()) return;
     const ids = [...state.coll.keys()];
@@ -1012,14 +1046,14 @@
     if (installEvt) { installEvt.prompt(); await installEvt.userChoice; installEvt = null; $("installBtn").classList.remove("show"); }
     else say(t("iosInstall"));
   };
-  addEventListener("online", async () => { await flushQueue(); await loadSeries(); await loadUser(); render(); await resolveScans(); prefetchForOffline(); });
+  addEventListener("online", async () => { await flushQueue(); await loadSeries(); await loadUser(); render(); await resolveScans(); await syncCatalogue(); prefetchForOffline(); });
   addEventListener("offline", () => updateOffline());
 
   applyI18n();
   await loadSeries();
   await loadUser();
   render();
-  flushQueue().then(resolveScans).then(prefetchForOffline);
+  flushQueue().then(resolveScans).then(syncCatalogue).then(prefetchForOffline);
   // sans détecteur intégré, on garde ZXing en réserve pour pouvoir scanner hors ligne
   if (!("BarcodeDetector" in window) && !isOffline()) setTimeout(() => import(ZXING).catch(() => {}), 4000);
 </script>
