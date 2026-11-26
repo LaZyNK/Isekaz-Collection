@@ -231,7 +231,10 @@
   .tile .heart { position: absolute; bottom: 6px; left: 6px; color: var(--sakura); font-size: 16px; text-shadow: 0 1px 4px #000; }
   .tile-name { margin-top: 8px; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tile-sub { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  details.autres summary { cursor: pointer; color: var(--muted); margin-top: 22px; }
+  details.autres { margin-top: 26px; border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; background: rgba(255,255,255,.02); }
+  details.autres summary { cursor: pointer; color: var(--muted); }
+  details.autres[open] summary { margin-bottom: 8px; }
+  h4.pays { margin: 18px 0 4px; font-size: 16px; color: var(--white); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
   /* ---------- Lecture / onglets ---------- */
   .tile .lub { position: absolute; top: 6px; right: 6px; font-size: 14px; background: rgba(10,6,7,.75); border-radius: 999px; padding: 1px 5px; }
   .lu-btn.on { background: rgba(61,220,132,.15); border-color: #3ddc84; color: #bff5d6; }
@@ -544,7 +547,7 @@
       expandAll: "Tout déplier", collapseAll: "Tout replier",
       author: "Auteur", authors: "Auteurs", editions: "Éditions", boxes: "Coffrets & packs", simple: "Édition simple",
       nParus: n => `${n} tome${n > 1 ? "s" : ""} référencé${n > 1 ? "s" : ""}`, linked: ed => `reliée à ${ed}`,
-      enCours: "Édition en cours", finie: "Édition terminée", otherLangs: n => `Éditions dans d'autres langues (${n})`,
+      enCours: "Édition en cours", finie: "Édition terminée", otherLangs: n => `Éditions étrangères (${n})`, reimp: "Autre tirage", noLocalEd: "Pas encore d'édition française connue pour cette œuvre : regarde les éditions étrangères ci-dessous.",
       nEditions: n => `${n} édition${n > 1 ? "s" : ""}`, groupes: { collector: "Édition collector", limitee: "Édition limitée",
         jaquette_alt: "Jaquettes alternatives", premier_tirage: "Exclusivités premier tirage", jaquette_coffret_dvd: "Jaquettes de coffret DVD", autre: "Autres tirages" },
       typeL: "Type :", publicL: "Public :",
@@ -656,7 +659,7 @@
       expandAll: "Expand all", collapseAll: "Collapse all",
       author: "Author", authors: "Authors", editions: "Editions", boxes: "Box sets & packs", simple: "Standard edition",
       nParus: n => `${n} volume${n > 1 ? "s" : ""} listed`, linked: ed => `linked to ${ed}`,
-      enCours: "Ongoing", finie: "Completed", otherLangs: n => `Editions in other languages (${n})`,
+      enCours: "Ongoing", finie: "Completed", otherLangs: n => `Foreign editions (${n})`, reimp: "Other printing", noLocalEd: "No edition in your language yet: see the foreign editions below.",
       nEditions: n => `${n} edition${n > 1 ? "s" : ""}`, groupes: { collector: "Collector edition", limitee: "Limited edition",
         jaquette_alt: "Alternate covers", premier_tirage: "First-print exclusives", jaquette_coffret_dvd: "DVD box set covers", autre: "Other printings" },
       typeL: "Type:", publicL: "Audience:",
@@ -1441,7 +1444,8 @@
     const img = v.photo_url || v.couverture_url || (v.isbn13 ? `https://covers.openlibrary.org/b/isbn/${v.isbn13}-M.jpg?default=false` : "");
     const produit = s.type && !["manga", "light_novel"].includes(s.type);
     const nom = large || produit ? (v.titre || v.variante_nom || s.titre) : `${t("tome")} ${v.numero}`;
-    const sous = large ? (v.variante_nom && v.variante_nom !== nom ? v.variante_nom : v.contenu) : (v.variante && v.variante_nom ? v.variante_nom : "");
+    const sous = (large ? (v.variante_nom && v.variante_nom !== nom ? v.variante_nom : v.contenu) : (v.variante && v.variante_nom ? v.variante_nom : ""))
+      ?.replace(/\s*97[89]\d{10}/g, "").replace(/^.*(Réimpression|Autre tirage).*$/i, t("reimp"));
     return `<div class="tile ${large ? "wide" : ""} ${e.quantite > 0 ? "owned" : e.souhait ? "wished" : ""}" data-vid="${v.id}" role="button" tabindex="0">
       <div class="tile-cover">${large ? "" : v.numero}${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : ""}
         ${e.quantite > 1 ? `<span class="dblb">×${e.quantite}</span>` : ""}${!e.quantite && e.souhait ? `<span class="heart">♥</span>` : ""}
@@ -1581,13 +1585,21 @@
       }
       return html;
     };
-    const visibles = toutes.filter(e => state.editionLangs.has(e.langue || "fr"));
-    const autres = toutes.filter(e => !state.editionLangs.has(e.langue || "fr"));
-    const html1 = visibles.map(blocEdition).join("");
+    // Éditions du pays de l'utilisateur d'abord ; toutes les éditions étrangères à part, rangées par pays et repliées
+    const maLangue = state.editionLangs.has(lang) ? lang : [...state.editionLangs][0] ?? "fr";
+    const visibles = toutes.filter(e => (e.langue || "fr") === maLangue);
+    const autres = toutes.filter(e => (e.langue || "fr") !== maLangue);
+    const html1 = visibles.length ? visibles.map(blocEdition).join("") : `<p class="meta">${t("noLocalEd")}</p>`;
+    const parLangue = new Map();
+    autres.forEach(e => { const l = e.langue || "fr"; (parLangue.get(l) ?? parLangue.set(l, []).get(l)).push(e); });
     const positions = first ? {} : Object.fromEntries([...app.querySelectorAll(".row[data-row]")].map(r => [r.dataset.row, r.scrollLeft]));
     const ouverts = first ? false : !!app.querySelector("details.autres[open]");
     const hauteur = window.scrollY;
-    const html2 = autres.length ? `<details class="autres"><summary>${t("otherLangs", autres.length)}</summary>${autres.map(blocEdition).join("")}</details>` : "";
+    const DRAPEAUX = { fr: "🇫🇷", en: "🇺🇸", de: "🇩🇪", es: "🇪🇸", it: "🇮🇹", ja: "🇯🇵", pt: "🇧🇷", ko: "🇰🇷", nl: "🇳🇱", pl: "🇵🇱", zh: "🇨🇳" };
+    const html2 = autres.length ? `<details class="autres"><summary>🌍 ${t("otherLangs", autres.length)} —
+        ${[...parLangue.keys()].map(l => `${DRAPEAUX[l] ?? ""} ${esc(t("langs")[l] ?? l.toUpperCase())}`).join(", ")}</summary>
+      ${[...parLangue.entries()].map(([l, eds]) => `<h4 class="pays">${DRAPEAUX[l] ?? "🏳️"} ${esc(t("langs")[l] ?? l.toUpperCase())} <small class="meta">${eds.length}</small></h4>
+        ${eds.map(blocEdition).join("")}`).join("")}</details>` : "";
 
     app.innerHTML = `<button class="back">${t("back")}</button>
       <h2 class="oeuvre-title">${esc(titre)}</h2>
