@@ -12,6 +12,7 @@ Site de collectionneur manga : catalogue des séries réelles avec les ISBN de c
 - **Suivi de lecture** : bouton « Marquer comme lu » sur la fiche d'un tome, onglet « Pile à lire » dans la collection.
 - **Genres** : `supabase/functions/genres` récupère les genres et le public (shōnen…) d'une œuvre sur AniList la première fois qu'on l'ouvre ; filtre « Genre » dans le catalogue.
 - **Planning des sorties** : onglet Planning (mes séries / tout, par semaine, compte à rebours, export agenda .ics), pastille et notification pour les sorties de la semaine dans ses séries (quand le site est ouvert).
+- **Suivre une série et pointer vite** : sous chaque édition, « 🔔 Suivre » (ses prochains tomes arrivent dans le planning et les alertes) et « ☑ Pointer mes tomes » (bande de numéros à toucher, mode plage, Tout/Aucun, un seul enregistrement).
 - **Lens** : dans le scanner, photo d'une couverture sans code-barres ; le site lit le texte (Tesseract.js) et propose les séries correspondantes.
 - **Profil, succès et classement** : onglet Profil (niveau, 20 succès, profil public ou non, présentation, lien `#u=pseudo`), classement des profils publics (fonction `classement`).
 - **Import des ISBN en masse** : `scripts/import_isbn.py`, qui lit le site de l’éditeur (Glénat), Google Books ou le catalogue BnF.

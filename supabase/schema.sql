@@ -140,3 +140,16 @@ grant execute on function public.classement(int) to anon, authenticated;
 alter table public.series add column if not exists genres_maj timestamptz;
 create index if not exists series_genres_idx on public.series using gin (genres);
 create index if not exists volumes_date_idx on public.volumes (date_parution);
+
+-- ===== Séries suivies (migration « suivis_series ») : prochains tomes dans le planning et les alertes =====
+create table if not exists public.suivis (
+  user_id uuid not null references auth.users(id) on delete cascade default auth.uid(),
+  serie_id bigint not null references public.series(id) on delete cascade,
+  created_at timestamptz default now(),
+  primary key (user_id, serie_id)
+);
+create index if not exists suivis_serie_idx on public.suivis (serie_id);
+alter table public.suivis enable row level security;
+create policy "voir ses suivis" on public.suivis for select to authenticated using ((select auth.uid()) = user_id);
+create policy "suivre" on public.suivis for insert to authenticated with check ((select auth.uid()) = user_id);
+create policy "ne plus suivre" on public.suivis for delete to authenticated using ((select auth.uid()) = user_id);

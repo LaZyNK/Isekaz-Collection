@@ -312,6 +312,16 @@
   .form-prof { display: grid; gap: 10px; max-width: 520px; }
   .form-prof textarea { min-height: 70px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; }
   .switch { display: flex; gap: 8px; align-items: center; }
+  .ed-actions { display: flex; gap: 8px; margin: 8px 0 2px; flex-wrap: wrap; }
+  .ed-actions button { background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 999px; padding: 6px 12px; font-size: 13px; }
+  .ed-actions button.on { border-color: var(--gold); color: var(--gold); }
+  .pt-row { display: flex; gap: 8px; overflow-x: auto; padding: 6px 2px 12px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+  .pt-row button { flex: 0 0 auto; min-width: 48px; height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2);
+    color: var(--muted); font-weight: 700; font-size: 16px; scroll-snap-align: start; }
+  .pt-row button.on { background: var(--red); border-color: var(--red); color: var(--white); box-shadow: 0 0 12px rgba(224,40,60,.5); }
+  .pt-row button.anchor { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .pt-tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 4px 0 12px; }
+  .pt-tools .on { border-color: var(--gold); color: var(--gold); }
   .lens-res { display: grid; gap: 8px; margin-top: 10px; }
   .lens-res button { text-align: left; }
 </style>
@@ -370,6 +380,11 @@
 <dialog id="fiche" class="sheet">
   <div class="sheet-head"><h3 data-i18n="product"></h3><button class="x" id="ficheClose" aria-label="×">×</button></div>
   <div class="sheet-body" id="ficheBody"></div>
+</dialog>
+
+<dialog id="pointer" class="sheet">
+  <div class="sheet-head"><h3 id="ptTitre"></h3><button class="x" id="ptClose" aria-label="×">×</button></div>
+  <div class="sheet-body" id="ptBody"></div>
 </dialog>
 
 <dialog id="ajout" class="sheet">
@@ -445,6 +460,11 @@
       tab_collection: "Collection", tab_pile: "Pile à lire", tab_souhaits: "Souhaits",
       pileHint: "Les tomes que tu possèdes mais n'as pas encore lus.", emptyPile: "Rien à lire : tu es à jour ! 🎉",
       planning: "Planning", profil: "Profil",
+      pointer: "☑ Pointer mes tomes", follow: "🔔 Suivre", following: "🔔 Suivie ✓", followOn: "Série suivie : tu seras prévenu des prochains tomes.",
+      followOff: "Tu ne suis plus cette série.", ptHint: "Touche les numéros que tu possèdes, puis enregistre. Fais glisser la bande sur le côté.",
+      ptRange: "↔ Mode plage", ptRangeHint: "Touche le premier puis le dernier tome : tout ce qui est entre les deux suit.",
+      ptAll: "Tout", ptNone: "Aucun", ptCount: (a, b) => `${a} / ${b} cochés`, ptSave: n => n ? `Enregistrer (${n} changement${n > 1 ? "s" : ""})` : "Aucun changement",
+      ptDone: n => `${n} tome${n > 1 ? "s" : ""} mis à jour ✓`, ptDbl: "Les doubles déjà notés sont gardés.",
       planTitle: "Planning des sorties", planMine: "Mes séries", planAll: "Tout", planIcs: "📅 Ajouter à mon agenda",
       planEmpty: "Aucune sortie connue sur cette période.", planEmptyMine: "Aucune sortie prévue dans tes séries pour l'instant. Regarde « Tout » !",
       planNote: "Dates fournies par les éditeurs et Google Books : elles peuvent bouger. Le catalogue se remplit au fur et à mesure.",
@@ -540,6 +560,11 @@
       readMark: "📖 Mark as read", readDone: "📖 Read ✓", readL: "read", readOf: (a, b) => `read ${a} / ${b}`,
       tab_collection: "Collection", tab_pile: "To read", tab_souhaits: "Wishlist",
       planning: "Releases", profil: "Profile",
+      pointer: "☑ Tick my volumes", follow: "🔔 Follow", following: "🔔 Following ✓", followOn: "Following: you'll be told about upcoming volumes.",
+      followOff: "You no longer follow this series.", ptHint: "Tap the numbers you own, then save. Swipe the strip sideways.",
+      ptRange: "↔ Range mode", ptRangeHint: "Tap the first then the last volume: everything in between follows.",
+      ptAll: "All", ptNone: "None", ptCount: (a, b) => `${a} / ${b} ticked`, ptSave: n => n ? `Save (${n} change${n > 1 ? "s" : ""})` : "No change",
+      ptDone: n => `${n} volume${n > 1 ? "s" : ""} updated ✓`, ptDbl: "Duplicates already recorded are kept.",
       planTitle: "Release calendar", planMine: "My series", planAll: "All", planIcs: "📅 Add to my calendar",
       planEmpty: "No known release in this period.", planEmptyMine: "No upcoming release in your series yet. Check “All”!",
       planNote: "Dates come from publishers and Google Books and may change. The catalogue keeps growing.",
@@ -673,8 +698,127 @@
   async function queueSet(qu) { if (state.user) await local.set(`queue:${state.user.id}`, qu); }
   async function saveColl() { if (state.user) await local.set(`coll:${state.user.id}`, [...state.coll.values()]); }
 
+  // ---------- Séries suivies ----------
+  state.suivis = new Set();
+  async function chargerSuivis() {
+    const { data, error } = await avecDelai(db.from("suivis").select("serie_id"));
+    const ids = error ? (await local.get(`suivis:${state.user.id}`)) ?? [] : (data ?? []).map(r => r.serie_id);
+    state.suivis = new Set(ids);
+    const qs = (await local.get(`suivisQ:${state.user.id}`)) ?? {};
+    for (const [sid, on] of Object.entries(qs)) on ? state.suivis.add(+sid) : state.suivis.delete(+sid);
+    local.set(`suivis:${state.user.id}`, [...state.suivis]);
+  }
+  async function basculerSuivi(sid) {
+    if (!state.user) { openAuth("login"); return; }
+    const on = !state.suivis.has(sid);
+    on ? state.suivis.add(sid) : state.suivis.delete(sid);
+    local.set(`suivis:${state.user.id}`, [...state.suivis]);
+    const qs = (await local.get(`suivisQ:${state.user.id}`)) ?? {};
+    qs[sid] = on; await local.set(`suivisQ:${state.user.id}`, qs);
+    say(on ? t("followOn") : t("followOff"));
+    state.planAt = 0; render(); flushSuivis().then(verifierAlertes);
+  }
+  async function flushSuivis() {
+    if (!state.user || isOffline()) return;
+    const qs = (await local.get(`suivisQ:${state.user.id}`)) ?? {};
+    for (const [sid, on] of Object.entries(qs)) {
+      const { error } = on ? await db.from("suivis").upsert({ user_id: state.user.id, serie_id: +sid }, { onConflict: "user_id,serie_id" })
+        : await db.from("suivis").delete().eq("serie_id", +sid).eq("user_id", state.user.id);
+      if (error && netError(error)) return;
+      delete qs[sid];
+    }
+    await local.set(`suivisQ:${state.user.id}`, qs);
+  }
+  const boutonsEdition = (s, normaux) => state.user ? `<div class="ed-actions">
+      ${normaux.length ? `<button data-pointer="${s.id}">${t("pointer")}</button>` : ""}
+      ${s.statut !== "terminée" ? `<button data-suivre="${s.id}" class="${state.suivis.has(s.id) ? "on" : ""}" aria-pressed="${state.suivis.has(s.id)}">${state.suivis.has(s.id) ? t("following") : t("follow")}</button>` : ""}</div>` : "";
+  function bindBoutonsEdition(vols, series) {
+    app.querySelectorAll("[data-suivre]").forEach(b => b.onclick = () => basculerSuivi(+b.dataset.suivre));
+    app.querySelectorAll("[data-pointer]").forEach(b => b.onclick = () => {
+      const sid = +b.dataset.pointer, se = series.find(x => x.id === sid);
+      ouvrirPointer(se, (vols ?? []).filter(v => v.serie_id === sid && !v.variante).sort((a, c) => a.numero - c.numero));
+    });
+  }
+
+  // ---------- Pointer plusieurs tomes d'un coup ----------
+  function ouvrirPointer(se, normaux) {
+    if (!state.user) { openAuth("login"); return; }
+    const avant = new Set(normaux.filter(v => state.coll.get(v.id)?.quantite > 0).map(v => v.id));
+    const sel = new Set(avant);
+    let plage = false, ancre = null;
+    $("ptTitre").textContent = `${se.titre}${se.edition ? " — " + se.edition : ""}`;
+    const nbChang = () => normaux.filter(v => sel.has(v.id) !== avant.has(v.id)).length;
+    const dessiner = () => {
+      const row = $("ptBody").querySelector(".pt-row"), x = row?.scrollLeft ?? 0;
+      $("ptBody").innerHTML = `<p class="meta" style="margin:0 0 8px">${plage ? t("ptRangeHint") : t("ptHint")}</p>
+        <div class="pt-tools"><button class="btn ghost ${plage ? "on" : ""}" id="ptPlage">${t("ptRange")}</button>
+          <button class="btn ghost" id="ptAll">${t("ptAll")}</button><button class="btn ghost" id="ptNone">${t("ptNone")}</button>
+          <span class="meta" style="margin-left:auto">${t("ptCount", sel.size, normaux.length)}</span></div>
+        <div class="pt-row">${normaux.map(v => `<button data-pt="${v.id}" class="${sel.has(v.id) ? "on" : ""} ${ancre === v.id ? "anchor" : ""}" aria-pressed="${sel.has(v.id)}">${v.numero}</button>`).join("")}</div>
+        <p class="meta" style="font-size:12px;margin:0 0 10px">${t("ptDbl")}</p>
+        <button class="btn" id="ptSave" style="width:100%" ${nbChang() ? "" : "disabled"}>${t("ptSave", nbChang())}</button>`;
+      $("ptBody").querySelector(".pt-row").scrollLeft = x;
+      $("ptBody").querySelectorAll("[data-pt]").forEach(b => b.onclick = () => {
+        const id = +b.dataset.pt;
+        if (plage && ancre !== null && ancre !== id) {
+          const i = normaux.findIndex(v => v.id === ancre), j = normaux.findIndex(v => v.id === id);
+          const etat = sel.has(ancre);
+          normaux.slice(Math.min(i, j), Math.max(i, j) + 1).forEach(v => etat ? sel.add(v.id) : sel.delete(v.id));
+          ancre = null;
+        } else {
+          sel.has(id) ? sel.delete(id) : sel.add(id);
+          ancre = plage ? id : null;
+        }
+        navigator.vibrate?.(15); dessiner();
+      });
+      $("ptPlage").onclick = () => { plage = !plage; ancre = null; dessiner(); };
+      $("ptAll").onclick = () => { normaux.forEach(v => sel.add(v.id)); ancre = null; dessiner(); };
+      $("ptNone").onclick = () => { sel.clear(); ancre = null; dessiner(); };
+      $("ptSave").onclick = async () => {
+        const changes = normaux.filter(v => sel.has(v.id) !== avant.has(v.id)).map(v => [v, sel.has(v.id) ? { quantite: 1 } : { quantite: 0 }]);
+        $("ptSave").disabled = true;
+        await setEntries(changes);
+        $("pointer").close(); say(t("ptDone", changes.length));
+      };
+    };
+    dessiner();
+    $("pointer").showModal();
+  }
+
+  // plusieurs tomes en une fois : un seul envoi au serveur, sinon file d'attente hors ligne
+  async function setEntries(list) {
+    if (!state.user || !list.length) return;
+    const at = new Date().toISOString(), nexts = [];
+    for (const [v, patch] of list) {
+      const cur = state.coll.get(v.id) ?? { volume_id: v.id, quantite: 0, souhait: false, lu: false };
+      const next = { ...cur, ...patch, serie_id: cur.serie_id ?? v.serie_id };
+      if (next.quantite > 0) next.souhait = false;
+      nexts.push(next);
+    }
+    const vide = n => n.quantite === 0 && !n.souhait && !n.lu;
+    let ok = false;
+    if (!isOffline() && !Object.keys(await queueGet()).length) {
+      const aGarder = nexts.filter(n => !vide(n)), aSuppr = nexts.filter(vide).map(n => n.volume_id);
+      const r1 = aGarder.length ? await db.from("collection").upsert(aGarder.map(n => ({ user_id: state.user.id, volume_id: n.volume_id, quantite: n.quantite,
+        souhait: n.souhait, lu: !!n.lu, lu_le: n.lu_le ?? null, updated_at: at })), { onConflict: "user_id,volume_id" }) : { error: null };
+      const r2 = aSuppr.length && !r1.error ? await db.from("collection").delete().in("volume_id", aSuppr).eq("user_id", state.user.id) : { error: null };
+      const err = r1.error || r2.error;
+      if (err && !netError(err)) { say(t("error") + err.message); return; }
+      ok = !err;
+    }
+    if (!ok) {
+      const qu = await queueGet();
+      nexts.forEach(n => qu[n.volume_id] = { volume_id: n.volume_id, quantite: n.quantite, souhait: n.souhait, lu: !!n.lu, lu_le: n.lu_le ?? null, at });
+      await queueSet(qu);
+    }
+    nexts.forEach(n => vide(n) ? state.coll.delete(n.volume_id) : state.coll.set(n.volume_id, n));
+    await saveColl();
+    renderAccount(); render(); updateOffline();
+  }
+
   async function flushQueue() {
     if (!state.user || isOffline()) return;
+    flushSuivis();
     const qu = await queueGet(), ops = Object.values(qu);
     if (!ops.length) return updateOffline();
     let sent = 0;
@@ -756,7 +900,7 @@
     state.user = session?.user ?? null;
     // jeton expiré sans réseau, ou Supabase qui ne répond pas : on garde le dernier compte connu
     if (!state.user && (isOffline() || res?.error)) state.user = store.get("isekaz.lastUser", null);
-    state.profile = null; state.coll = new Map();
+    state.profile = null; state.coll = new Map(); state.suivis = new Set();
     if (state.user) {
       store.set("isekaz.lastUser", { id: state.user.id });
       const [{ data: p, error: e1 }, { data: c, error: e2 }] = await Promise.all([
@@ -768,6 +912,7 @@
       const rows = e2 ? (await local.get(`coll:${state.user.id}`)) ?? []
         : (c ?? []).map(({ volumes, ...r }) => ({ ...r, serie_id: volumes?.serie_id ?? null }));
       rows.forEach(r => state.coll.set(r.volume_id, r));
+      await chargerSuivis();
       // les changements pas encore envoyés passent devant ce que dit le serveur
       Object.values(await queueGet()).forEach(o => (o.quantite === 0 && !o.souhait && !o.lu) ? state.coll.delete(o.volume_id) : state.coll.set(o.volume_id, o));
       await saveColl();
@@ -1073,6 +1218,7 @@
         <div class="meta">${[s.edition, s.editeur, s.auteur, s.public ? t("publics")[s.public] : null, s.type && s.type !== "manga" ? t("types")[s.type] : null,
           (s.langue || "fr").toUpperCase()].filter(Boolean).map(esc).join(" · ")}</div>
         ${state.user ? `<div class="meta" style="color:var(--sakura)">${t("youHave", owned, max)}</div>` : ""}
+        ${boutonsEdition(s, normaux)}
       </div>${state.user && normaux.length ? `<button class="btn ghost" id="allBtn">${t("haveAll")}</button>` : ""}</div>
       <div class="vols">${Array.from({ length: max }, (_, i) => volCell(byNum[i + 1], i + 1, nSpe[i + 1] || 0)).join("")}</div>
       <h3 class="section-title" id="specials" style="margin-top:30px">✦ ${t("specials")}${speciales.length ? ` <small class="meta" style="font-family:Inter;font-size:14px">${speciales.length}</small>` : ""}</h3>
@@ -1089,7 +1235,7 @@
       if (error) return say(t("error") + error.message);
       rows.forEach(r => state.coll.set(r.volume_id, r)); renderAccount(); render();
     };
-    bindVols();
+    bindVols(); bindBoutonsEdition(state.vols, [s]);
     setNav();
     if (first) window.scrollTo({ top: 0 });
   }
@@ -1287,6 +1433,7 @@
       if (normaux.length || !vs.length) html += `<div class="ed"><button class="ed-head" data-serie="${s.id}">
           <div class="t">${esc(nomEd)} • ${esc(s.editeur ?? "—")}<span class="chev">›</span></div>
           <div class="s">${[t("nParus", normaux.length), statut, (s.langue || "fr").toUpperCase()].filter(Boolean).map(esc).join(" • ")}</div></button>
+        ${boutonsEdition(s, normaux)}
         ${normaux.length ? `<div class="row" data-row="${s.id}-n">${normaux.map(v => tile(v, s)).join("")}</div>` : ""}</div>`;
       // une rangée par type d'édition spéciale (collector, jaquettes, premier tirage…)
       for (const g of ["collector", "limitee", "premier_tirage", "jaquette_alt", "jaquette_coffret_dvd", "autre"]) {
@@ -1320,6 +1467,7 @@
 
     app.querySelector(".back").onclick = () => { state.view = "catalogue"; render(); };
     app.querySelectorAll(".ed-head[data-serie]").forEach(b => b.onclick = () => openSerie(+b.dataset.serie));
+    bindBoutonsEdition(vols, toutes);
     bindTiles(vols);
     if (!first) {
       app.querySelectorAll(".row[data-row]").forEach(r => { if (positions[r.dataset.row]) r.scrollLeft = positions[r.dataset.row]; });
@@ -1336,7 +1484,7 @@
   // ---------- Planning des sorties + alertes ----------
   const isoJour = d => d.toISOString().slice(0, 10);
   const lundi = d => { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return isoJour(x); };
-  const mesSeries = () => new Set([...state.coll.values()].filter(r => r.quantite > 0 || r.souhait).map(r => r.serie_id).filter(Boolean));
+  const mesSeries = () => new Set([...[...state.coll.values()].filter(r => r.quantite > 0 || r.souhait).map(r => r.serie_id).filter(Boolean), ...state.suivis]);
   // une sortie compte comme « mes séries » si l'œuvre est suivie (n'importe quelle édition de la même langue)
   function estMaSerie(v, suivies) {
     if (suivies.has(v.serie_id)) return true;
@@ -1976,6 +2124,7 @@
     $("ajout").showModal();
   }
   $("ajoutClose").onclick = () => $("ajout").close();
+  $("ptClose").onclick = () => $("pointer").close();
 
   $("scanBtn").onclick = openScanner;
   $("scanClose").onclick = () => { stopScanner(); $("scanner").close(); };
