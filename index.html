@@ -387,7 +387,7 @@
       addedBy: "ajouté par un membre",
       scan: "Scanner", product: "Fiche produit", isbnPh: "ou tape le code-barres / l'ISBN", aim: "Vise le code-barres (livre, DVD, figurine…)",
       noCam: "Caméra indisponible : autorise-la dans ton navigateur, ou tape l'ISBN ci-dessous.", badIsbn: "Code-barres illisible ou invalide.",
-      loading: "Recherche de la fiche…", notFound: "Aucune fiche trouvée pour cet ISBN.", seeSerie: "Voir la série",
+      loading: "Chargement…", loadingFiche: "Recherche de la fiche…", notFound: "Aucune fiche trouvée pour cet ISBN.", seeSerie: "Voir la série",
       publisher: "Éditeur", isbnL: "ISBN", eanL: "Code-barres", release: "Parution", price: "Prix", langL: "Langue", volL: "Tome",
       inDays: n => n === 0 ? "aujourd'hui" : n === 1 ? "demain" : `dans ${n} jours`, soonOut: "À paraître",
       more: "Lire la suite", less: "Réduire", priceUnknown: "non communiqué",
@@ -453,7 +453,7 @@
       addedBy: "added by a member",
       scan: "Scan", product: "Product sheet", isbnPh: "or type the barcode / ISBN", aim: "Point at the barcode (book, DVD, figure…)",
       noCam: "Camera unavailable: allow it in your browser, or type the ISBN below.", badIsbn: "Unreadable or invalid barcode.",
-      loading: "Looking up the product…", notFound: "No product found for this ISBN.", seeSerie: "See the series",
+      loading: "Loading…", loadingFiche: "Looking up the product…", notFound: "No product found for this ISBN.", seeSerie: "See the series",
       publisher: "Publisher", isbnL: "ISBN", eanL: "Barcode", release: "Release", price: "Price", langL: "Language", volL: "Volume",
       inDays: n => n === 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`, soonOut: "Upcoming",
       more: "Read more", less: "Show less", priceUnknown: "not available",
@@ -504,6 +504,9 @@
     return { get: k => run("readonly", s => s.get(k)), set: (k, v) => run("readwrite", s => s.put(v, k)), del: k => run("readwrite", s => s.delete(k)) };
   })();
   const isOffline = () => !navigator.onLine;
+  const avecDelai = (req, ms = 7000) => Promise.race([req,
+    new Promise(ok => setTimeout(() => ok({ data: null, error: { message: "network timeout" } }), ms))]);
+  const chargement = () => { app.innerHTML = `<p class="empty">${t("loading")}</p>`; };
   const netError = e => e && (isOffline() || /fetch|network|load failed/i.test(e.message ?? String(e)));
 
   async function rememberVols(sid, vols) {
@@ -603,8 +606,8 @@
     if (state.user) {
       await local.set("lastUser", { id: state.user.id });
       const [{ data: p, error: e1 }, { data: c, error: e2 }] = await Promise.all([
-        db.from("profiles").select("pseudo").eq("id", state.user.id).maybeSingle(),
-        db.from("collection").select("volume_id, quantite, souhait"),
+        avecDelai(db.from("profiles").select("pseudo").eq("id", state.user.id).maybeSingle()),
+        avecDelai(db.from("collection").select("volume_id, quantite, souhait")),
       ]);
       state.profile = e1 ? await local.get(`profile:${state.user.id}`) : p;
       if (!e1 && p) await local.set(`profile:${state.user.id}`, p);
@@ -706,7 +709,7 @@
     // le serveur renvoie 1000 lignes maximum par demande : on lit le catalogue par paquets
     let data = [], error = null;
     for (let from = 0; ; from += 1000) {
-      const r = await db.from("series").select("*, volumes(count)").order("titre").order("id").range(from, from + 999);
+      const r = await avecDelai(db.from("series").select("*, volumes(count)").order("titre").order("id").range(from, from + 999), 10000);
       if (r.error) { error = r.error; break; }
       data.push(...r.data);
       if (r.data.length < 1000) break;
@@ -877,8 +880,10 @@
   async function openSerie(id) {
     const first = state.view !== "serie" || state.serie !== id;
     state.view = "serie"; state.serie = id; state.filterIds = null;
-    const s = state.series.find(x => x.id === id) ?? (await db.from("series").select("*, volumes(count)").eq("id", id).single()).data;
-    const { data: vols, error } = await db.from("volumes").select("*").eq("serie_id", id).order("numero");
+    if (first) { chargement(); window.scrollTo({ top: 0 }); }
+    const s = state.series.find(x => x.id === id) ?? (await avecDelai(db.from("series").select("*, volumes(count)").eq("id", id).single())).data;
+    if (!s) { state.view = "catalogue"; return render(); }
+    const { data: vols, error } = await avecDelai(db.from("volumes").select("*").eq("serie_id", id).order("numero"));
     if (!error) await rememberVols(id, vols);
     state.vols = error ? (await local.get(`vols:${id}`)) ?? [] : vols ?? [];
     if (error && !state.vols.length) { app.innerHTML = `<button class="back">${t("back")}</button><p class="empty">${t("notCached")}</p>`;
@@ -975,7 +980,8 @@
     const ordre = e => (state.editionLangs.has(e.langue || "fr") ? 0 : 1) * 1e6 - (e.volumes[0]?.count ?? 0);
     toutes.sort((a, b) => ordre(a) - ordre(b) || (a.edition ? 1 : 0) - (b.edition ? 1 : 0));
     const ids = toutes.map(x => x.id);
-    let { data: vols, error } = await db.from("volumes").select("*").in("serie_id", ids).order("numero");
+    if (first) { chargement(); window.scrollTo({ top: 0 }); setNav(); }
+    let { data: vols, error } = await avecDelai(db.from("volumes").select("*").in("serie_id", ids).order("numero"));
     if (error) { vols = []; for (const id of ids) vols.push(...((await local.get(`vols:${id}`)) ?? [])); }
     else { const par = {}; vols.forEach(v => (par[v.serie_id] ??= []).push(v)); for (const id of ids) await rememberVols(id, par[id] ?? []); }
     if (state.view !== "oeuvre" || state.oeuvre !== key) return; // on a changé de page entre-temps
@@ -1235,7 +1241,7 @@
 
   async function openFiche(isbn) {
     const body = $("ficheBody");
-    body.innerHTML = `<p class="scan-status">${t("loading")}</p>`;
+    body.innerHTML = `<p class="scan-status">${t("loadingFiche")}</p>`;
     if (!$("fiche").open) $("fiche").showModal();
     const v = await chercherFiche(isbn);
     if (!v && isOffline()) return renderScanEnAttente(isbn);
