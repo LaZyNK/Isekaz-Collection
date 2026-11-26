@@ -364,6 +364,23 @@ Deno.serve(async (req) => {
     const memes = resoudreEditeurs(tomes).filter((t) => normT(t.titre) === normT(se.titre) && !t.edition
       && t.editeur.toLowerCase() === (se.editeur ?? "").toLowerCase() && t.langue === se.langue);
     if (memes.length) await enregistrer(memes);
+    // Même tome, autre ISBN (réimpression, « Édition originale »…) : on reprend sa couverture, par numéro de tome.
+    const parNumero = (liste: Tome[]) => {
+      const m = new Map<number, Tome>();
+      for (const t of liste) if (t.couverture && !t.variante && normT(t.titre) === normT(se.titre) && t.langue === se.langue)
+        if (!m.has(t.numero) || !t.edition) m.set(t.numero, t);
+      return m;
+    };
+    const { data: sans } = await db.from("volumes").select("id, numero").eq("serie_id", se.id).is("couverture_url", null).is("variante", null);
+    let couvs = parNumero(tomes);
+    if ((sans ?? []).filter((v: any) => !couvs.has(v.numero)).length > (sans ?? []).length / 2 && cible.includes("inpublisher")) {
+      tomes = sansDoublons([...tomes, ...await google(`intitle:"${se.titre.replace(/"/g, "")}"`, 0)]); // l'éditeur s'écrit autrement chez Google
+      couvs = parNumero(tomes);
+    }
+    for (const v of sans ?? []) {
+      const t = couvs.get(v.numero);
+      if (t) { await db.from("volumes").update({ couverture_url: t.couverture }).eq("id", v.id).is("couverture_url", null); completes++; }
+    }
     if (quota) return json({ serie: se.id, quota: true }, 429); // on réessaiera demain, sans marquer la série comme faite
     await db.from("series").update({ couv_maj: new Date().toISOString() }).eq("id", se.id);
     return json({ serie: se.id, trouves: tomes.length, completes, appels: pages.length });
