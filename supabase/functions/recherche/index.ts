@@ -122,8 +122,9 @@ async function google(q: string, start = 0): Promise<Tome[]> {
   url.searchParams.set("startIndex", String(start));
   url.searchParams.set("printType", "books");
   if (GOOGLE_KEY) url.searchParams.set("key", GOOGLE_KEY);
-  const r = await fetch(url);
-  if (!r.ok) { console.log("google", r.status, await r.text()); return []; }
+  let r = await fetch(url);
+  if (r.status >= 500) { await new Promise((ok) => setTimeout(ok, 800)); r = await fetch(url); } // panne passagère : un 2e essai
+  if (!r.ok) { console.log("google", r.status, (await r.text()).slice(0, 120)); return []; }
   const items = (await r.json()).items ?? [];
   const out: Tome[] = [];
   for (const it of items) {
@@ -152,6 +153,75 @@ async function openLibrary(isbn: string): Promise<Tome[]> {
   return [{ ...t, editeur: editeurPropre(b.publishers?.[0]?.name ?? INCONNU), auteur: b.authors?.[0]?.name ?? null,
     langue: langueIsbn(isbn),
     isbn13: isbn, date: null, couverture: b.cover?.medium ?? null }];
+}
+
+// ---------- BnF (dépôt légal) : connaît tous les livres publiés en France ----------
+const ent = (x: string) => x.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&");
+function champs(rec: string, tag: string): Record<string, string[]>[] {
+  const out: Record<string, string[]>[] = [];
+  for (const m of rec.matchAll(new RegExp(`<mxc:datafield[^>]*tag="${tag}"[^>]*>([\\s\\S]*?)</mxc:datafield>`, "g"))) {
+    const d: Record<string, string[]> = {};
+    for (const sf of m[1].matchAll(/<mxc:subfield code="(.)">([\s\S]*?)<\/mxc:subfield>/g)) (d[sf[1]] ??= []).push(ent(sf[2]).trim());
+    out.push(d);
+  }
+  return out;
+}
+const prem = (f: Record<string, string[]>[], c: string) => f.find((x) => x[c]?.length)?.[c][0] ?? "";
+const numDe = (x: string) => { const m = x.match(/(\d{1,3})/); const n = m ? +m[1] : 0; return n > 0 && n <= 300 ? n : null; };
+function isbn13de(raw: string): string | null {
+  let d = raw.replace(/[^0-9Xx]/g, "").toUpperCase();
+  if (d.length === 10) { const c = "978" + d.slice(0, 9); d = c + ((10 - [...c].reduce((a, x, i) => a + +x * (i % 2 ? 3 : 1), 0) % 10) % 10); }
+  return /^97[89]\d{10}$/.test(d) ? d : null;
+}
+const propreT = (x: string) => { const y = clean(x.replace(/[\[\]«»"]/g, "")).replace(/^[\s.,:;/=-]+|[\s.,:;/=-]+$/g, ""); return y ? y[0].toUpperCase() + y.slice(1) : y; };
+
+async function bnf(q: string): Promise<Tome[]> {
+  const url = new URL("https://catalogue.bnf.fr/api/SRU");
+  url.searchParams.set("version", "1.2"); url.searchParams.set("operation", "searchRetrieve");
+  url.searchParams.set("query", `bib.title all "${q.replace(/"/g, "")}" and bib.doctype any "a"`);
+  url.searchParams.set("recordSchema", "unimarcxchange"); url.searchParams.set("maximumRecords", "100");
+  let txt = "";
+  try { const r = await fetch(url, { headers: { "User-Agent": "IsekazCollection/1.0" } }); if (!r.ok) return []; txt = await r.text(); }
+  catch { return []; }
+  const out: (Tome & { taille: string })[] = [];
+  for (const rec of txt.split("<mxc:record").slice(1)) {
+    const f = (t: string) => champs(rec, t);
+    const isbn = f("010").flatMap((x) => x.a ?? []).map(isbn13de).find(Boolean);
+    if (!isbn) continue;
+    const t200 = f("200"), titre = prem(t200, "a"), sous = prem(t200, "i") || prem(t200, "e");
+    let n = numDe(prem(t200, "h")), serie = n ? titre : "";
+    if (!n) for (const tag of ["461", "410", "225"]) {
+      for (const x of f(tag)) { const v = numDe(x.v?.[0] ?? ""); if (v) { n = v; serie = (x.t ?? x.a ?? [""])[0]; break; } }
+      if (n) break;
+    }
+    if (!n || !serie) continue;
+    const langue = prem(f("101"), "a");
+    if (langue && langue !== "fre") continue;
+    const texte = `${titre} ${sous} ${prem(f("205"), "a")}`;
+    if (/coffret|starter|bundle|pack\b/i.test(texte)) continue; // les coffrets arrivent par l'import complet
+    const genre = ["225", "410", "461", "606", "608"].flatMap((t) => f(t).flatMap((x) => Object.values(x).flat())).join(" ");
+    const editeur = editeurPropre(prem(f("214"), "c") || prem(f("210"), "c") || INCONNU);
+    const annee = (`${prem(f("214"), "d")} ${prem(f("210"), "d")}`.match(/(19|20)\d{2}/) ?? [""])[0];
+    const prix = (f("010").flatMap((x) => x.d ?? []).join(" ").match(/(\d+)[,.](\d{2})\s*(?:EUR|€)/));
+    const taille = (f("215").flatMap((x) => x.d ?? []).join(" ").match(/(\d{2})\s*(?:x\s*\d+\s*)?cm/) ?? ["", ""])[1];
+    const coll = /collector|[ée]dition limit[ée]e/i.test(texte);
+    out.push({ titre: propreT(serie), edition: null, editeur, auteur: null, langue: "fr", numero: n, isbn13: isbn,
+      date: null, couverture: null, prix: prix ? +`${prix[1]}.${prix[2]}` : null, devise: prix ? "EUR" : null,
+      variante: coll ? (/limit/i.test(texte) ? "limitee" : "collector") : null, variante_nom: coll ? propreT(sous || "Édition collector") : null,
+      public: publicDe(genre), taille, description: null, _annee: annee } as any);
+  }
+  // une même œuvre en plusieurs formats (18 cm / 21 cm…) = plusieurs éditions
+  const formats = new Map<string, Set<string>>();
+  for (const t of out) { const k = `${t.titre.toLowerCase()}|${t.editeur.toLowerCase()}`; (formats.get(k) ?? formats.set(k, new Set()).get(k)!).add(t.taille); }
+  // un ISBN par numéro : la notice la plus récente
+  const garde = new Map<string, any>();
+  for (const t of out as any[]) {
+    const plusieurs = [...(formats.get(`${t.titre.toLowerCase()}|${t.editeur.toLowerCase()}`) ?? [])].filter(Boolean).length > 1;
+    t.edition = plusieurs && t.taille ? `Format ${t.taille} cm` : null;
+    const k = `${t.titre}|${t.editeur}|${t.edition}|${t.numero}|${t.variante ?? ""}`.toLowerCase();
+    if (!garde.has(k) || (t._annee ?? "") > (garde.get(k)._annee ?? "")) garde.set(k, t);
+  }
+  return [...garde.values()].map(({ taille: _t, _annee: _a, ...t }) => t as Tome);
 }
 
 // Range les tomes par série et les enregistre ; renvoie les id des séries touchées.
@@ -284,6 +354,8 @@ Deno.serve(async (req) => {
   const complements = await Promise.all(cibles.flatMap((c) =>
     [0, 40].map((s) => google(`intitle:"${c.titre}" inpublisher:"${c.editeur}"`, s))));
   tomes = resoudreEditeurs(sansDoublons([...tomes, ...complements.flat()])).filter(garde);
+  // Google ne trouve rien (ou presque) : la BnF prend le relais pour les éditions françaises
+  if (tomes.filter((x) => x.langue === "fr").length < 3) tomes = sansDoublons([...tomes, ...(await bnf(q)).filter(garde)]);
   const ids = await enregistrer(tomes);
   return json({ series: [...new Set(ids)], source: tomes.length ? "ajout" : "introuvable" });
 });
