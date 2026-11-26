@@ -41,6 +41,7 @@ function sansCollector(t: { titre: string; edition: string | null }) {
 }
 
 const clean = (s: string) => s.replace(/\s+/g, " ").trim();
+const normT = (s: string) => s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 // Langue probable d'après le groupe de l'ISBN (si Google ne la donne pas)
 function langueIsbn(isbn: string): string {
   const pref: [string, string][] = [["97910", "fr"], ["9782", "fr"], ["9780", "en"], ["9781", "en"], ["9783", "de"],
@@ -176,6 +177,7 @@ function isbn13de(raw: string): string | null {
 const propreT = (x: string) => { const y = clean(x.replace(/[\[\]«»"]/g, "")).replace(/^[\s.,:;/=-]+|[\s.,:;/=-]+$/g, ""); return y ? y[0].toUpperCase() + y.slice(1) : y; };
 
 async function bnf(q: string): Promise<Tome[]> {
+  const mots = q.toLowerCase().split(/\s+/).filter((m) => m.length > 1);
   const url = new URL("https://catalogue.bnf.fr/api/SRU");
   url.searchParams.set("version", "1.2"); url.searchParams.set("operation", "searchRetrieve");
   url.searchParams.set("query", `bib.title all "${q.replace(/"/g, "")}" and bib.doctype any "a"`);
@@ -194,6 +196,8 @@ async function bnf(q: string): Promise<Tome[]> {
       for (const x of f(tag)) { const v = numDe(x.v?.[0] ?? ""); if (v) { n = v; serie = (x.t ?? x.a ?? [""])[0]; break; } }
       if (n) break;
     }
+    // sans numéro : un one-shot (ou un hors-série) qui correspond à la recherche devient sa propre fiche
+    if (!n && titre && mots.every((m) => `${titre} ${sous}`.toLowerCase().includes(m))) { n = 1; serie = sous ? `${titre} - ${sous}` : titre; }
     if (!n || !serie) continue;
     const langue = prem(f("101"), "a");
     if (langue && langue !== "fre") continue;
@@ -210,14 +214,19 @@ async function bnf(q: string): Promise<Tome[]> {
       variante: coll ? (/limit/i.test(texte) ? "limitee" : "collector") : null, variante_nom: coll ? propreT(sous || "Édition collector") : null,
       public: publicDe(genre), taille, description: null, _annee: annee } as any);
   }
-  // une même œuvre en plusieurs formats (18 cm / 21 cm…) = plusieurs éditions
-  const formats = new Map<string, Set<string>>();
-  for (const t of out) { const k = `${t.titre.toLowerCase()}|${t.editeur.toLowerCase()}`; (formats.get(k) ?? formats.set(k, new Set()).get(k)!).add(t.taille); }
+  // une même œuvre dans un autre format (18 cm / 21 cm…) = une autre édition, s'il y a au moins 3 tomes dans ce format
+  const formats = new Map<string, Map<string, number>>();
+  for (const t of out) {
+    const k = `${t.titre.toLowerCase()}|${t.editeur.toLowerCase()}`;
+    const m = formats.get(k) ?? formats.set(k, new Map()).get(k)!;
+    m.set(t.taille, (m.get(t.taille) ?? 0) + 1);
+  }
   // un ISBN par numéro : la notice la plus récente
   const garde = new Map<string, any>();
   for (const t of out as any[]) {
-    const plusieurs = [...(formats.get(`${t.titre.toLowerCase()}|${t.editeur.toLowerCase()}`) ?? [])].filter(Boolean).length > 1;
-    t.edition = plusieurs && t.taille ? `Format ${t.taille} cm` : null;
+    const m = formats.get(`${t.titre.toLowerCase()}|${t.editeur.toLowerCase()}`)!;
+    const principal = [...m.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    t.edition = t.taille && t.taille !== principal && (m.get(t.taille) ?? 0) >= 3 ? `Format ${t.taille} cm` : null;
     const k = `${t.titre}|${t.editeur}|${t.edition}|${t.numero}|${t.variante ?? ""}`.toLowerCase();
     if (!garde.has(k) || (t._annee ?? "") > (garde.get(k)._annee ?? "")) garde.set(k, t);
   }
@@ -234,10 +243,11 @@ async function enregistrer(tomes: Tome[]): Promise<number[]> {
   const ids: number[] = [];
   for (const g of groupes.values()) {
     const s = g[0];
-    let q = db.from("series").select("id").ilike("titre", s.titre).ilike("editeur", s.editeur).eq("langue", s.langue);
-    q = s.edition ? q.ilike("edition", s.edition) : q.is("edition", null);
-    const { data: found } = await q.limit(1);
-    let id = found?.[0]?.id;
+    // même série si le titre est identique à la ponctuation près (« Dr. Stone » = « Dr Stone »)
+    const mot = (s.titre.match(/[\p{L}\p{N}]{2,}/u) ?? [s.titre])[0];
+    const { data: cands } = await db.from("series").select("id, titre, edition").ilike("editeur", s.editeur).eq("langue", s.langue)
+      .ilike("titre", `%${mot.replace(/[%_]/g, "")}%`).limit(500);
+    let id = cands?.find((c: any) => normT(c.titre) === normT(s.titre) && normT(c.edition ?? "") === normT(s.edition ?? ""))?.id;
     if (!id) {
       const { data, error } = await db.from("series")
         .insert({ titre: s.titre, edition: s.edition, editeur: s.editeur, auteur: s.auteur, langue: s.langue, source: "recherche",
@@ -342,7 +352,7 @@ Deno.serve(async (req) => {
   if (q.length < 3 || q.length > 80) return json({ error: "Recherche trop courte ou trop longue" }, 400);
   const mots = q.toLowerCase().split(/\s+/);
   const garde = (t: Tome) => mots.every((m) => `${t.titre} ${t.edition ?? ""}`.toLowerCase().includes(m));
-  const pages = await Promise.all([google(`intitle:${q}`, 0), google(`intitle:${q}`, 40)]);
+  const [pages, depuisBnf] = await Promise.all([Promise.all([google(`intitle:${q}`, 0), google(`intitle:${q}`, 40)]), bnf(q)]);
   let tomes = resoudreEditeurs(sansDoublons(pages.flat())).filter(garde);
   // 2e passage ciblé « titre + éditeur » pour compléter les tomes manquants (les 4 séries les plus fournies)
   const compte = new Map<string, { t: Tome; n: number }>();
@@ -354,8 +364,8 @@ Deno.serve(async (req) => {
   const complements = await Promise.all(cibles.flatMap((c) =>
     [0, 40].map((s) => google(`intitle:"${c.titre}" inpublisher:"${c.editeur}"`, s))));
   tomes = resoudreEditeurs(sansDoublons([...tomes, ...complements.flat()])).filter(garde);
-  // Google ne trouve rien (ou presque) : la BnF prend le relais pour les éditions françaises
-  if (tomes.filter((x) => x.langue === "fr").length < 3) tomes = sansDoublons([...tomes, ...(await bnf(q)).filter(garde)]);
+  // la BnF complète les tomes français que Google n'a pas renvoyés (et ajoute les one-shots)
+  tomes = sansDoublons([...tomes, ...depuisBnf.filter(garde)]);
   const ids = await enregistrer(tomes);
   return json({ series: [...new Set(ids)], source: tomes.length ? "ajout" : "introuvable" });
 });
