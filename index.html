@@ -459,7 +459,7 @@
       readMark: "📖 Marquer comme lu", readDone: "📖 Lu ✓", readL: "lus", readOf: (a, b) => `lus ${a} / ${b}`,
       tab_collection: "Collection", tab_pile: "Pile à lire", tab_souhaits: "Souhaits",
       pileHint: "Les tomes que tu possèdes mais n'as pas encore lus.", emptyPile: "Rien à lire : tu es à jour ! 🎉",
-      planning: "Planning", profil: "Profil",
+      planning: "Planning", profil: "Profil", completing: "Recherche des tomes manquants et des couvertures chez les éditeurs…",
       pointer: "☑ Pointer mes tomes", follow: "🔔 Suivre", following: "🔔 Suivie ✓", followOn: "Série suivie : tu seras prévenu des prochains tomes.",
       followOff: "Tu ne suis plus cette série.", ptHint: "Touche les numéros que tu possèdes, puis enregistre. Fais glisser la bande sur le côté.",
       ptRange: "↔ Mode plage", ptRangeHint: "Touche le premier puis le dernier tome : tout ce qui est entre les deux suit.",
@@ -559,7 +559,7 @@
         "Time Manipulation": "Time travel", "Super Power": "Superpowers", Idol: "Idols" },
       readMark: "📖 Mark as read", readDone: "📖 Read ✓", readL: "read", readOf: (a, b) => `read ${a} / ${b}`,
       tab_collection: "Collection", tab_pile: "To read", tab_souhaits: "Wishlist",
-      planning: "Releases", profil: "Profile",
+      planning: "Releases", profil: "Profile", completing: "Looking for missing volumes and covers at the publishers…",
       pointer: "☑ Tick my volumes", follow: "🔔 Follow", following: "🔔 Following ✓", followOn: "Following: you'll be told about upcoming volumes.",
       followOff: "You no longer follow this series.", ptHint: "Tap the numbers you own, then save. Swipe the strip sideways.",
       ptRange: "↔ Range mode", ptRangeHint: "Tap the first then the last volume: everything in between follows.",
@@ -1413,8 +1413,39 @@
     } catch { /* pas grave : on réessaiera à la prochaine visite */ }
   }
 
+  // Œuvre incomplète (tomes manquants, peu de tomes, pas de couvertures) : on lance une fois la recherche
+  // chez les éditeurs (Google Books + BnF) en arrière-plan, puis on redessine avec ce qui a été trouvé.
+  state.completees ??= new Set();
+  async function completerOeuvre(toutes, vols) {
+    const key = cleOeuvre(toutes[0]);
+    if (isOffline() || state.completees.has(key)) return;
+    const deja = store.get("isekaz.completees", {});
+    if (Date.now() - (deja[key] ?? 0) < 3 * 864e5) return; // au plus une fois tous les 3 jours par appareil
+    const eds = toutes.filter(e => state.editionLangs.has(e.langue || "fr") && (e.type || "manga") === "manga");
+    const incomplete = eds.some(e => {
+      const n = (vols ?? []).filter(v => v.serie_id === e.id && !v.variante);
+      const max = Math.max(0, ...n.map(v => v.numero));
+      return n.length <= 3 || n.length < max || n.filter(v => !v.couverture_url && !v.photo_url).length > n.length / 2;
+    });
+    if (!eds.length || !incomplete) return;
+    state.completees.add(key);
+    deja[key] = Date.now(); store.set("isekaz.completees", Object.fromEntries(Object.entries(deja).slice(-300)));
+    const zone = $("completion");
+    if (zone) zone.hidden = false;
+    try {
+      const r = await fetch(`${URL_SB}/functions/v1/recherche`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ q: toutes[0].titre.slice(0, 80) }) });
+      if (!r.ok) return;
+      await loadSeries();
+      for (const e of state.series.filter(x => cleOeuvre(x) === key)) mem.delete(e.id);
+      if (state.view === "oeuvre" && state.oeuvre === key) openOeuvre(key);
+    } catch { /* on réessaiera plus tard */ }
+    finally { const z = $("completion"); if (z) z.hidden = true; }
+  }
+
   function dessinerOeuvre(toutes, vols, first) {
     setTimeout(() => enrichirGenres(toutes, vols), 0);
+    setTimeout(() => completerOeuvre(toutes, vols), 0);
     const s0 = toutes[0];
     const titre = toutes.map(e => e.titre).sort((a, b) => [...b].filter(c => c !== c.toLowerCase()).length - [...a].filter(c => c !== c.toLowerCase()).length)[0];
     const pubs = [...new Set(toutes.map(e => e.public).filter(Boolean))];
@@ -1461,7 +1492,7 @@
         ${genres.map(g => `<span class="gchip">${esc(t("genresL")[g] ?? g)}</span>`).join("")}</div>` : ""}
       ${auteurs.length ? `<div class="block"><h3>${auteurs.length > 1 ? t("authors") : t("author")}</h3>
         ${auteurs.map(a => `<div class="person"><div><b>${esc(a)}</b><div class="meta">${t("author")}</div></div></div>`).join("")}</div>` : ""}
-      <div class="block"><h3>${t("editions")}</h3>${html1}${html2}</div>
+      <div class="block"><h3>${t("editions")}</h3><p class="meta" id="completion" hidden>⏳ ${t("completing")}</p>${html1}${html2}</div>
       ${coffrets.length ? `<div class="block"><h3>${t("boxes")}</h3><div class="row" data-row="coffrets">${coffrets.map(([v, s]) => tile(v, s, true)).join("")}</div></div>` : ""}
       <p style="margin-top:22px"><button class="btn ghost" id="addSpecialBtn">${t("addSpecial")}</button></p>`;
 

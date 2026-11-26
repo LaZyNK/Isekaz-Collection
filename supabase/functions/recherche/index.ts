@@ -229,6 +229,13 @@ async function bnf(q: string): Promise<Tome[]> {
 
 // Range les tomes par série et les enregistre ; renvoie les id des séries touchées.
 async function enregistrer(tomes: Tome[]): Promise<number[]> {
+  // les tomes déjà connus (souvent venus de la BnF, sans image) récupèrent couverture, date exacte, prix et résumé
+  const infos = tomes.filter((t) => t.couverture || t.date || t.prix || t.description)
+    .map((t) => ({ isbn13: t.isbn13, couverture: t.couverture, date: t.date, prix: t.prix ?? null, devise: t.devise ?? null, description: t.description ?? null }));
+  for (let i = 0; i < infos.length; i += 200) {
+    const { error } = await db.rpc("completer_volumes", { lignes: infos.slice(i, i + 200) });
+    if (error) console.log("completer", error.message);
+  }
   const groupes = new Map<string, Tome[]>();
   for (const t of tomes) {
     const k = `${normT(t.titre)}|${normT(t.edition ?? "")}|${t.editeur.toLowerCase()}|${t.langue}`;

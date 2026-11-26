@@ -153,3 +153,6 @@ alter table public.suivis enable row level security;
 create policy "voir ses suivis" on public.suivis for select to authenticated using ((select auth.uid()) = user_id);
 create policy "suivre" on public.suivis for insert to authenticated with check ((select auth.uid()) = user_id);
 create policy "ne plus suivre" on public.suivis for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- ===== Compléter les tomes connus (migration « completer_volumes ») : couverture, date, prix, résumé venus de Google =====
+-- Voir la migration dans Supabase : fonction public.completer_volumes(jsonb), réservée à la clé serveur.
