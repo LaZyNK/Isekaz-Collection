@@ -195,6 +195,43 @@
   .prod-actions .qty { flex: 1.3; background: var(--panel-2); border: 1px solid var(--red); border-radius: 10px; padding: 4px; }
   .prod-actions .qty button { background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 8px; height: 34px; }
   .pending-scans { margin-bottom: 18px; }
+  /* ---------- Page œuvre ---------- */
+  .oeuvre-title { font-family: "Bebas Neue", sans-serif; font-size: clamp(42px, 9vw, 64px); line-height: .95; margin: 0; letter-spacing: 1px;
+                  text-transform: uppercase; transform: skewX(-5deg); }
+  .oeuvre-type { color: var(--muted); letter-spacing: 3px; text-transform: uppercase; font-size: 14px; margin: 10px 0 14px; }
+  .gchips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .gchip { background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font-size: 14px; }
+  .gchip.pub { border-color: var(--red); color: var(--white); }
+  .block { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 18px; }
+  .block h3 { font-size: 22px; margin: 0 0 12px; font-weight: 600; }
+  .person { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+  .person b { color: var(--red); font-size: 17px; font-weight: 600; }
+  .ed { margin-top: 20px; }
+  .ed-head { background: none; border: none; padding: 0; text-align: left; color: var(--text); width: 100%; }
+  .ed-head .t { color: var(--red); font-size: 18px; font-weight: 600; }
+  .ed-head .t .chev { margin-left: 6px; }
+  .ed-head .s { color: var(--muted); font-size: 14px; margin-top: 3px; }
+  .row { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; padding: 14px 16px 8px; margin: 0 -16px;
+         scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .row::-webkit-scrollbar { display: none; }
+  .tile { flex: 0 0 128px; width: 128px; min-width: 0; scroll-snap-align: start; cursor: pointer; position: relative; }
+  .tile.wide { flex-basis: 156px; width: 156px; }
+  .tile-cover { position: relative; aspect-ratio: 2/3; border-radius: 8px; overflow: hidden; display: grid; place-items: center;
+                background: repeating-linear-gradient(135deg, #1a1215 0 10px, #170f12 10px 20px);
+                font-family: "Bebas Neue", sans-serif; font-size: 40px; color: #4a3337; transition: transform .15s; }
+  .tile.wide .tile-cover { aspect-ratio: 4/5; background-color: #f4eeee; }
+  .tile:hover .tile-cover { transform: translateY(-2px); }
+  .tile-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .tile.owned .tile-cover { box-shadow: 0 0 0 2px var(--red), 0 10px 22px -12px rgba(224,40,60,.9); }
+  .tile.wished .tile-cover { box-shadow: 0 0 0 2px var(--sakura); }
+  .tick { position: absolute; top: -8px; left: -8px; z-index: 2; width: 34px; height: 34px; border-radius: 50%; border: none; display: grid; place-items: center;
+          background: rgba(10,6,7,.82); color: var(--white); font-size: 18px; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+  .tile.owned .tick { background: var(--red); }
+  .tile .dblb { position: absolute; bottom: 6px; right: 6px; background: var(--gold); color: #2a1d05; font: 700 11px Inter, sans-serif; border-radius: 999px; padding: 2px 7px; }
+  .tile .heart { position: absolute; bottom: 6px; left: 6px; color: var(--sakura); font-size: 16px; text-shadow: 0 1px 4px #000; }
+  .tile-name { margin-top: 8px; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile-sub { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  details.autres summary { cursor: pointer; color: var(--muted); margin-top: 22px; }
   .form { display: grid; gap: 12px; }
   .form label { display: grid; gap: 5px; font-size: 13px; color: var(--muted); }
   dialog select, dialog textarea { background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 10px 12px; font: inherit; width: 100%; }
@@ -329,6 +366,11 @@
       offlineSearch: "La recherche chez les éditeurs a besoin du réseau. Tu peux quand même filtrer le catalogue enregistré.",
       offlineReady: "Ta collection est enregistrée sur cet appareil : elle marchera aussi sans réseau.",
       showMore: n => `Voir plus (${n} autres séries)`,
+      author: "Auteur", authors: "Auteurs", editions: "Éditions", boxes: "Coffrets & packs", simple: "Édition simple",
+      nParus: n => `${n} tome${n > 1 ? "s" : ""} référencé${n > 1 ? "s" : ""}`, linked: ed => `reliée à ${ed}`,
+      enCours: "Édition en cours", finie: "Édition terminée", otherLangs: n => `Éditions dans d'autres langues (${n})`,
+      nEditions: n => `${n} édition${n > 1 ? "s" : ""}`, groupes: { collector: "Édition collector", limitee: "Édition limitée",
+        jaquette_alt: "Jaquettes alternatives", premier_tirage: "Exclusivités premier tirage", jaquette_coffret_dvd: "Jaquettes de coffret DVD", autre: "Autres tirages" },
       typeL: "Type :", publicL: "Public :",
       types: { manga: "Manga", light_novel: "Light novel", artbook: "Artbook", dvd: "DVD", bluray: "Blu-ray", vhs: "VHS", figurine: "Figurines", goodies: "Goodies", jeu_video: "Jeux vidéo", cd: "CD / Vinyles", autre: "Autres" },
       publics: { shonen: "Shōnen", seinen: "Seinen", shojo: "Shōjo", josei: "Josei", kodomo: "Kodomo" },
@@ -390,6 +432,11 @@
       offlineSearch: "Searching the publishers needs a connection. You can still filter the saved catalogue.",
       offlineReady: "Your collection is saved on this device: it will work without a connection too.",
       showMore: n => `Show more (${n} more series)`,
+      author: "Author", authors: "Authors", editions: "Editions", boxes: "Box sets & packs", simple: "Standard edition",
+      nParus: n => `${n} volume${n > 1 ? "s" : ""} listed`, linked: ed => `linked to ${ed}`,
+      enCours: "Ongoing", finie: "Completed", otherLangs: n => `Editions in other languages (${n})`,
+      nEditions: n => `${n} edition${n > 1 ? "s" : ""}`, groupes: { collector: "Collector edition", limitee: "Limited edition",
+        jaquette_alt: "Alternate covers", premier_tirage: "First-print exclusives", jaquette_coffret_dvd: "DVD box set covers", autre: "Other printings" },
       typeL: "Type:", publicL: "Audience:",
       types: { manga: "Manga", light_novel: "Light novel", artbook: "Artbook", dvd: "DVD", bluray: "Blu-ray", vhs: "VHS", figurine: "Figures", goodies: "Goodies", jeu_video: "Video games", cd: "CD / Vinyl", autre: "Other" },
       publics: { shonen: "Shōnen", seinen: "Seinen", shojo: "Shōjo", josei: "Josei", kodomo: "Kodomo" },
@@ -681,7 +728,8 @@
       if (res.error) { say(res.error); return; }
       await loadSeries();
       if (!res.series?.length) { say(t("nothing")); return; }
-      if (body.isbn) { say(res.source === "ajout" ? t("added") : ""); return openSerie(res.series[0]); }
+      if (body.isbn) { say(res.source === "ajout" ? t("added") : ""); const se = state.series.find(x => x.id === res.series[0]);
+        return se ? openOeuvre(cleOeuvre(se)) : openSerie(res.series[0]); }
       say(res.source === "ajout" ? t("foundN", res.series.length) : "");
       state.view = "catalogue"; state.filterIds = new Set(res.series); render();
     } catch (e) { say(t("offline")); }
@@ -699,10 +747,31 @@
       <div class="meta">${t("volsRef", n)}${s.nb_tomes ? ` / ${s.nb_tomes}` : ""}${s.public ? ` · <span style="color:var(--sakura)">${esc(t("publics")[s.public])}</span>` : ""}</div>
       <div class="progress"><i style="width:${s.nb_tomes ? Math.min(100, n / total * 100) : 100}%"></i></div></div>`;
   }
+  // Une « œuvre » = toutes les éditions d'un même titre (éditeurs, formats, langues…)
+  const cleOeuvre = x => (x.titre || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  function regrouper(eds) {
+    const m = new Map();
+    for (const e of eds) { const k = cleOeuvre(e); if (!m.has(k)) m.set(k, { key: k, eds: [] }); m.get(k).eds.push(e); }
+    return [...m.values()];
+  }
+  function oeuvreCard(o) {
+    const eds = o.eds, n = eds.reduce((a, e) => a + (e.volumes[0]?.count ?? 0), 0);
+    const titre = eds.map(e => e.titre).sort((a, b) => [...b].filter(c => c !== c.toLowerCase()).length - [...a].filter(c => c !== c.toLowerCase()).length)[0];
+    const editeurs = [...new Set(eds.map(e => e.editeur).filter(Boolean))].slice(0, 3);
+    const langs = [...new Set(eds.map(e => (e.langue || "fr").toUpperCase()))].join(" · ");
+    const types = [...new Set(eds.map(e => e.type || "manga"))].filter(x => x !== "manga").map(x => t("types")[x]);
+    const pub = eds.map(e => e.public).find(Boolean);
+    return `<div class="card" data-oeuvre="${esc(o.key)}" tabindex="0" role="button">
+      <span class="flag">${esc([langs, ...types].join(" · "))}</span>
+      <h2>${esc(titre)}</h2>
+      <div class="meta">${esc(editeurs.join(" · "))}${eds.length > 1 ? ` · ${t("nEditions", eds.length)}` : ""}</div>
+      <div class="meta">${t("volsRef", n)}${pub ? ` · <span style="color:var(--sakura)">${esc(t("publics")[pub])}</span>` : ""}</div>
+      <div class="progress"><i style="width:100%"></i></div></div>`;
+  }
   function bindCards() {
-    app.querySelectorAll(".card").forEach(c => {
-      c.onclick = () => openSerie(+c.dataset.id);
-      c.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openSerie(+c.dataset.id); } };
+    app.querySelectorAll(".card[data-oeuvre]").forEach(c => {
+      c.onclick = () => openOeuvre(c.dataset.oeuvre);
+      c.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openOeuvre(c.dataset.oeuvre); } };
     });
   }
 
@@ -758,13 +827,13 @@
     if (state.filterIds) list = list.filter(s => state.filterIds.has(s.id));
     else if (f && !/^\d{13}$/.test(f.replace(/[^0-9]/g, ""))) list = list.filter(s => `${s.titre} ${s.edition ?? ""} ${s.editeur ?? ""}`.toLowerCase().includes(f));
     list = list.filter(s => (!state.types.size || state.types.has(s.type || "manga")) && (!state.publics.size || state.publics.has(s.public)));
-    const visible = list.filter(s => state.editionLangs.has(s.langue || "fr"));
-    const hidden = list.length - visible.length;
+    const visible = regrouper(list.filter(s => state.editionLangs.has(s.langue || "fr")));
+    const hidden = regrouper(list).length - visible.length;
     const showHero = !f && !state.filterIds;
     app.innerHTML = (showHero ? hero() : "") + chipFilters(t("typeL"), "type", state.types, t("types"), "data-type")
       + chipFilters(t("publicL"), "public", state.publics, t("publics"), "data-public") + langFilters() +
       `<h3 class="section-title">${TORII}${showHero ? t("allSeries") : t("results")}</h3>` +
-      (visible.length ? `<div class="series">${visible.slice(0, state.limit).map(serieCard).join("")}</div>` : "") +
+      (visible.length ? `<div class="series">${visible.slice(0, state.limit).map(oeuvreCard).join("")}</div>` : "") +
       (visible.length > state.limit ? `<p style="text-align:center;margin-top:20px"><button class="btn ghost" id="moreBtn">${t("showMore", visible.length - state.limit)}</button></p>` : "") +
       (hidden ? `<p class="empty">${t("hiddenByLang", hidden)}</p>` : "") +
       (!list.length ? `<p class="empty">${t("notHere")}</p>` : "");
@@ -832,7 +901,7 @@
       ${speciales.length ? `<div class="vols">${speciales.map(v => volCell(v, v.numero)).join("")}</div>` : ""}
       <p style="margin-top:14px"><button class="btn ghost" id="addSpecialBtn">${t("addSpecial")}</button></p>`;
     $("addSpecialBtn").onclick = () => openAjout({ mode: "variante", serie: s, numero: 1, max: Math.max(max, 1) });
-    app.querySelector(".back").onclick = () => { state.view = "catalogue"; render(); };
+    app.querySelector(".back").onclick = () => { state.view = "oeuvre"; state.oeuvre = cleOeuvre(s); render(); };
     const all = $("allBtn");
     if (all) all.onclick = async () => {
       const rows = normaux.filter(v => !(state.coll.get(v.id)?.quantite > 0))
@@ -871,8 +940,110 @@
       <h3 class="section-title" style="margin-top:26px;cursor:pointer" data-sid="${vs[0].series.id}">${TORII}${esc(vs[0].series.titre)}
         <span class="meta" style="font-family:Inter;font-size:14px;letter-spacing:0">${esc([vs[0].series.edition, vs[0].series.editeur, (vs[0].series.langue || "fr").toUpperCase()].filter(Boolean).join(" · "))} · ${vs.length}</span></h3>
       <div class="vols">${vs.map(v => volCell(v, v.numero)).join("")}</div>`).join("");
-    app.querySelectorAll("[data-sid]").forEach(h => h.onclick = () => openSerie(+h.dataset.sid));
+    app.querySelectorAll("[data-sid]").forEach(h => h.onclick = () => {
+      const se = state.series.find(x => x.id === +h.dataset.sid); se ? openOeuvre(cleOeuvre(se)) : openSerie(+h.dataset.sid); });
     bindVols();
+  }
+
+  // ---------- Page œuvre : toutes les éditions en rangées ----------
+  function tile(v, s, large = false) {
+    const e = state.coll.get(v.id) ?? { quantite: 0, souhait: false };
+    const img = v.photo_url || v.couverture_url || (v.isbn13 ? `https://covers.openlibrary.org/b/isbn/${v.isbn13}-M.jpg?default=false` : "");
+    const produit = s.type && !["manga", "light_novel"].includes(s.type);
+    const nom = large || produit ? (v.titre || v.variante_nom || s.titre) : `${t("tome")} ${v.numero}`;
+    const sous = large ? (v.variante_nom && v.variante_nom !== nom ? v.variante_nom : v.contenu) : (v.variante && v.variante_nom ? v.variante_nom : "");
+    return `<div class="tile ${large ? "wide" : ""} ${e.quantite > 0 ? "owned" : e.souhait ? "wished" : ""}" data-vid="${v.id}" role="button" tabindex="0">
+      <div class="tile-cover">${large ? "" : v.numero}${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : ""}
+        ${e.quantite > 1 ? `<span class="dblb">×${e.quantite}</span>` : ""}${!e.quantite && e.souhait ? `<span class="heart">♥</span>` : ""}</div>
+      <button class="tick" data-tick aria-label="${esc(e.quantite > 0 ? t("own") : t("own"))}">${e.quantite > 0 ? "✓" : "+"}</button>
+      <div class="tile-name">${esc(nom)}</div>${sous ? `<div class="tile-sub">${esc(sous)}</div>` : ""}</div>`;
+  }
+
+  function ouvrirTome(v) {
+    const s = state.series.find(x => x.id === v.serie_id) ?? {};
+    if (!$("fiche").open) $("fiche").showModal();
+    renderFiche({ ...v, series: s });
+    if (!isOffline() && v.isbn13 && estLivre(v.isbn13) && !v.fiche_maj)
+      chercherFiche(v.isbn13).then(full => { if (full && $("fiche").open) renderFiche(full); });
+  }
+
+  async function openOeuvre(key) {
+    const first = state.view !== "oeuvre" || state.oeuvre !== key;
+    state.view = "oeuvre"; state.oeuvre = key; state.filterIds = null;
+    const toutes = state.series.filter(x => cleOeuvre(x) === key);
+    if (!toutes.length) { state.view = "catalogue"; return render(); }
+    const ordre = e => (state.editionLangs.has(e.langue || "fr") ? 0 : 1) * 1e6 - (e.volumes[0]?.count ?? 0);
+    toutes.sort((a, b) => ordre(a) - ordre(b) || (a.edition ? 1 : 0) - (b.edition ? 1 : 0));
+    const ids = toutes.map(x => x.id);
+    let { data: vols, error } = await db.from("volumes").select("*").in("serie_id", ids).order("numero");
+    if (error) { vols = []; for (const id of ids) vols.push(...((await local.get(`vols:${id}`)) ?? [])); }
+    else { const par = {}; vols.forEach(v => (par[v.serie_id] ??= []).push(v)); for (const id of ids) await rememberVols(id, par[id] ?? []); }
+    if (state.view !== "oeuvre" || state.oeuvre !== key) return; // on a changé de page entre-temps
+
+    const s0 = toutes[0];
+    const titre = toutes.map(e => e.titre).sort((a, b) => [...b].filter(c => c !== c.toLowerCase()).length - [...a].filter(c => c !== c.toLowerCase()).length)[0];
+    const pubs = [...new Set(toutes.map(e => e.public).filter(Boolean))];
+    const genres = [...new Set(toutes.flatMap(e => e.genres ?? []))].sort();
+    const auteurs = [...new Set(toutes.map(e => e.auteur).filter(Boolean))];
+    const types = [...new Set(toutes.map(e => e.type || "manga"))];
+    const coffrets = [];
+
+    const blocEdition = (s) => {
+      const vs = (vols ?? []).filter(v => v.serie_id === s.id).sort((a, b) => a.numero - b.numero);
+      const normaux = vs.filter(v => !v.variante);
+      coffrets.push(...vs.filter(v => ["coffret", "starter", "bundle"].includes(v.variante)).map(v => [v, s]));
+      const nomEd = s.edition || t("simple");
+      const statut = s.statut === "terminée" ? t("finie") : s.statut ? t("enCours") : "";
+      let html = "";
+      if (normaux.length || !vs.length) html += `<div class="ed"><button class="ed-head" data-serie="${s.id}">
+          <div class="t">${esc(nomEd)} • ${esc(s.editeur ?? "—")}<span class="chev">›</span></div>
+          <div class="s">${[t("nParus", normaux.length), statut, (s.langue || "fr").toUpperCase()].filter(Boolean).map(esc).join(" • ")}</div></button>
+        ${normaux.length ? `<div class="row">${normaux.map(v => tile(v, s)).join("")}</div>` : ""}</div>`;
+      // une rangée par type d'édition spéciale (collector, jaquettes, premier tirage…)
+      for (const g of ["collector", "limitee", "premier_tirage", "jaquette_alt", "jaquette_coffret_dvd", "autre"]) {
+        const sp = vs.filter(v => v.variante === g);
+        if (!sp.length) continue;
+        html += `<div class="ed"><button class="ed-head" data-serie="${s.id}">
+            <div class="t">${esc(t("groupes")[g])} • ${esc(s.editeur ?? "—")}<span class="chev">›</span></div>
+            <div class="s">${esc(t("nParus", sp.length))} • ${esc(t("linked", nomEd))}</div></button>
+          <div class="row">${sp.map(v => tile(v, s)).join("")}</div></div>`;
+      }
+      return html;
+    };
+    const visibles = toutes.filter(e => state.editionLangs.has(e.langue || "fr"));
+    const autres = toutes.filter(e => !state.editionLangs.has(e.langue || "fr"));
+    const html1 = visibles.map(blocEdition).join("");
+    const html2 = autres.length ? `<details class="autres"><summary>${t("otherLangs", autres.length)}</summary>${autres.map(blocEdition).join("")}</details>` : "";
+
+    app.innerHTML = `<button class="back">${t("back")}</button>
+      <h2 class="oeuvre-title">${esc(titre)}</h2>
+      <div class="oeuvre-type">${esc(types.map(x => t("types")[x] ?? x).join(" · "))}</div>
+      ${pubs.length || genres.length ? `<div class="gchips">${pubs.map(p => `<span class="gchip pub">${esc(t("publics")[p])}</span>`).join("")}
+        ${genres.map(g => `<span class="gchip">${esc(g)}</span>`).join("")}</div>` : ""}
+      ${auteurs.length ? `<div class="block"><h3>${auteurs.length > 1 ? t("authors") : t("author")}</h3>
+        ${auteurs.map(a => `<div class="person"><div><b>${esc(a)}</b><div class="meta">${t("author")}</div></div></div>`).join("")}</div>` : ""}
+      <div class="block"><h3>${t("editions")}</h3>${html1}${html2}</div>
+      ${coffrets.length ? `<div class="block"><h3>${t("boxes")}</h3><div class="row">${coffrets.map(([v, s]) => tile(v, s, true)).join("")}</div></div>` : ""}
+      <p style="margin-top:22px"><button class="btn ghost" id="addSpecialBtn">${t("addSpecial")}</button></p>`;
+
+    app.querySelector(".back").onclick = () => { state.view = "catalogue"; render(); };
+    app.querySelectorAll(".ed-head[data-serie]").forEach(b => b.onclick = () => openSerie(+b.dataset.serie));
+    const parId = new Map((vols ?? []).map(v => [v.id, v]));
+    app.querySelectorAll(".tile[data-vid]").forEach(el => {
+      const v = parId.get(+el.dataset.vid);
+      el.onclick = ev => {
+        if (ev.target.closest("[data-tick]")) {
+          const e = state.coll.get(v.id);
+          return e?.quantite > 0 ? ouvrirTome(v) : setEntry(v.id, { quantite: 1 });
+        }
+        ouvrirTome(v);
+      };
+      el.onkeydown = ev => { if (ev.key === "Enter") ouvrirTome(v); };
+    });
+    const max = Math.max(1, ...(vols ?? []).filter(v => v.serie_id === s0.id && !v.variante).map(v => v.numero));
+    $("addSpecialBtn").onclick = () => openAjout({ mode: "variante", serie: s0, numero: 1, max });
+    setNav();
+    if (first) window.scrollTo({ top: 0 });
   }
 
   function setNav() { document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.view === state.view)); }
@@ -880,6 +1051,7 @@
   function render() {
     setNav();
     if (state.view === "serie") return openSerie(state.serie);
+    if (state.view === "oeuvre") return openOeuvre(state.oeuvre);
     if (state.view === "collection" || state.view === "souhaits") return renderMine(state.view);
     renderCatalogue();
   }
@@ -1104,7 +1276,8 @@
       <div class="prod-actions"><button class="btn ghost" id="seeSerie">${t("seeSerie")}</button></div>`;
     const more = $("descMore");
     if (more) more.onclick = () => { const d = $("desc"); d.classList.toggle("short"); more.textContent = d.classList.contains("short") ? t("more") : t("less"); };
-    $("seeSerie").onclick = () => { $("fiche").close(); openSerie(v.serie_id); };
+    $("seeSerie").onclick = () => { $("fiche").close(); const se = state.series.find(x => x.id === v.serie_id) ?? s;
+      se?.titre ? openOeuvre(cleOeuvre(se)) : openSerie(v.serie_id); };
     $("ficheBody").querySelectorAll("button[data-a]").forEach(b => b.onclick = async () => {
       const cur = state.coll.get(v.id) ?? { quantite: 0, souhait: false };
       const patch = { own: { quantite: 1 }, plus: { quantite: cur.quantite + 1 }, minus: { quantite: cur.quantite - 1 }, wish: { souhait: !cur.souhait } }[b.dataset.a];
