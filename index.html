@@ -232,6 +232,26 @@
   .tile-name { margin-top: 8px; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tile-sub { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   details.autres summary { cursor: pointer; color: var(--muted); margin-top: 22px; }
+  /* ---------- Ma collection : liste compacte ---------- */
+  .mine-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .mine-bar input { flex: 1 1 160px; }
+  .mine-bar select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; }
+  .mine-list { display: grid; gap: 10px; }
+  .mine-item { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .mine-item.open { border-color: rgba(224,40,60,.5); }
+  .mine-item .row { margin: 0; padding: 12px 14px 6px; }
+  .mine-head { display: flex; align-items: center; gap: 12px; width: 100%; background: none; border: none; color: var(--text); padding: 10px 12px; text-align: left; }
+  .mine-cover { flex: none; width: 44px; height: 64px; border-radius: 6px; overflow: hidden; background: var(--panel-2); position: relative; }
+  .mine-cover img { width: 100%; height: 100%; object-fit: cover; }
+  .mine-info { flex: 1; min-width: 0; display: grid; gap: 3px; }
+  .mine-info b { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mine-info .meta { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mine-prog { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin-top: 3px; }
+  .mine-prog i { display: block; height: 100%; background: linear-gradient(90deg, var(--red-deep), var(--red), var(--sakura)); }
+  .mine-count { font-family: "Bebas Neue", sans-serif; font-size: 24px; color: var(--white); white-space: nowrap; }
+  .mine-count small { font-size: 16px; color: var(--muted); }
+  .mine-chev { color: var(--muted); font-size: 14px; width: 14px; text-align: center; }
+  .mine-go { display: block; margin: 0 14px 12px; }
   .form { display: grid; gap: 12px; }
   .form label { display: grid; gap: 5px; font-size: 13px; color: var(--muted); }
   dialog select, dialog textarea { background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 10px 12px; font: inherit; width: 100%; }
@@ -248,6 +268,8 @@
     .hero-art { border-radius: 14px; }
     .hero p { display: none; }
     .hero-stats { gap: 14px; margin-top: 8px; } .hero-stats b { font-size: 24px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .stat { min-width: 0; padding: 10px 12px; font-size: 12px; } .stat b { font-size: 26px; }
     nav { width: 100%; justify-content: space-between; } nav button { flex: 1; padding: 7px 4px; font-size: 13px; white-space: nowrap; }
   }
   @media (prefers-reduced-motion: reduce) { .hero-art { animation: none; } .card, .card:hover { transition: none; transform: none; } }
@@ -366,6 +388,8 @@
       offlineSearch: "La recherche chez les éditeurs a besoin du réseau. Tu peux quand même filtrer le catalogue enregistré.",
       offlineReady: "Ta collection est enregistrée sur cet appareil : elle marchera aussi sans réseau.",
       showMore: n => `Voir plus (${n} autres séries)`,
+      filterPh: "Filtrer mes séries…", sortL: "Trier", sortProg: "Progression", sortNb: "Nombre de tomes",
+      expandAll: "Tout déplier", collapseAll: "Tout replier",
       author: "Auteur", authors: "Auteurs", editions: "Éditions", boxes: "Coffrets & packs", simple: "Édition simple",
       nParus: n => `${n} tome${n > 1 ? "s" : ""} référencé${n > 1 ? "s" : ""}`, linked: ed => `reliée à ${ed}`,
       enCours: "Édition en cours", finie: "Édition terminée", otherLangs: n => `Éditions dans d'autres langues (${n})`,
@@ -432,6 +456,8 @@
       offlineSearch: "Searching the publishers needs a connection. You can still filter the saved catalogue.",
       offlineReady: "Your collection is saved on this device: it will work without a connection too.",
       showMore: n => `Show more (${n} more series)`,
+      filterPh: "Filter my series…", sortL: "Sort", sortProg: "Progress", sortNb: "Number of volumes",
+      expandAll: "Expand all", collapseAll: "Collapse all",
       author: "Author", authors: "Authors", editions: "Editions", boxes: "Box sets & packs", simple: "Standard edition",
       nParus: n => `${n} volume${n > 1 ? "s" : ""} listed`, linked: ed => `linked to ${ed}`,
       enCours: "Ongoing", finie: "Completed", otherLangs: n => `Editions in other languages (${n})`,
@@ -500,11 +526,12 @@
       r.onupgradeneeded = () => r.result.createObjectStore("kv");
       r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error); r.onblocked = () => ko(new Error("idb blocked"));
     }), 3000);
-    let casse = false; // stockage figé une fois : on n'insiste plus pendant cette visite
+    // stockage figé : on n'insiste plus (pendant 24 h), pour ne pas perdre de temps à chaque ouverture
+    let casse = Date.now() - store.get("isekaz.idbKO", 0) < 864e5;
     const run = (mode, fn) => casse ? Promise.resolve(undefined) : open().then(d => limite(new Promise((ok, ko) => {
       const tx = d.transaction("kv", mode); const req = fn(tx.objectStore("kv"));
       tx.oncomplete = () => ok(req?.result); tx.onerror = () => ko(tx.error); tx.onabort = () => ko(tx.error);
-    }), 4000)).catch(e => { if (/timeout|blocked/.test(e?.message)) { casse = true; console.warn("Stockage local indisponible :", e.message); } return undefined; });
+    }), 4000)).catch(e => { if (/timeout|blocked/.test(e?.message)) { casse = true; store.set("isekaz.idbKO", Date.now()); console.warn("Stockage local indisponible :", e.message); } return undefined; });
     return { get: k => run("readonly", s => s.get(k)), set: (k, v) => run("readwrite", s => s.put(v, k)), del: k => run("readwrite", s => s.delete(k)) };
   })();
   const isOffline = () => !navigator.onLine;
@@ -513,7 +540,21 @@
   const chargement = () => { app.innerHTML = `<p class="empty">${t("loading")}</p>`; };
   const netError = e => e && (isOffline() || /fetch|network|load failed/i.test(e.message ?? String(e)));
 
+  // Mémoire vive : une page déjà vue se réaffiche instantanément, puis se met à jour en arrière-plan
+  const mem = new Map(); // serie_id -> { vols, at }
+  async function volsDe(ids) {
+    const out = []; let complet = true;
+    for (const id of ids) {
+      let v = mem.get(id)?.vols;
+      if (!v) { v = await local.get(`vols:${id}`); if (v) mem.set(id, { vols: v, at: 0 }); }
+      if (v) out.push(...v); else complet = false;
+    }
+    return { vols: out, complet, frais: ids.every(id => Date.now() - (mem.get(id)?.at ?? 0) < 60000) };
+  }
+  const signature = vs => JSON.stringify([...vs].sort((a, b) => a.id - b.id).map(v => [v.id, v.numero, v.isbn13, v.variante, v.variante_nom, v.couverture_url, v.photo_url]));
+
   async function rememberVols(sid, vols) {
+    mem.set(+sid, { vols, at: Date.now() });
     await local.set(`vols:${sid}`, vols);
     const idx = (await local.get("isbnIndex")) ?? {};
     (vols ?? []).forEach(v => { if (v.isbn13) idx[v.isbn13] = +sid; });
@@ -929,31 +970,91 @@
 
   async function renderMine(kind) {
     if (!state.user) { app.innerHTML = `<p class="empty">${t("loginToSee", kind)}</p>`; return; }
-    const scans = (await local.get("scans")) ?? [];
-    const pend = kind === "collection" && scans.length ? `<div class="tip pending-scans"><b style="color:var(--white)">${t("pendingScans", scans.length)}</b>
-      <ul>${scans.map(x => `<li>${esc(x.isbn)} — ${x.action === "own" ? t("keepOwn") : x.action === "wish" ? t("keepWish") : t("keepLook")}</li>`).join("")}</ul></div>` : "";
+    const first = state.mineVue !== kind; state.mineVue = kind;
     const ids = [...state.coll.values()].filter(r => kind === "souhaits" ? r.souhait : r.quantite > 0).map(r => r.volume_id);
-    const s = stats();
+    const st = stats();
     const head = kind === "collection" ? `<div class="stats">
-      <div class="stat"><b>${s.possedes}</b>${t("tomes")}</div><div class="stat"><b>${s.doubles}</b>${t("doublesL")}</div>
-      <div class="stat"><b>${t("lvl")} ${s.niveau}</b>${t("nextLevel", s.prochain)}</div></div>` : "";
+      <div class="stat"><b>${st.possedes}</b>${t("tomes")}</div><div class="stat"><b>${st.doubles}</b>${t("doublesL")}</div>
+      <div class="stat"><b>${t("lvl")} ${st.niveau}</b>${t("nextLevel", st.prochain)}</div></div>` : "";
+    const scans = kind === "collection" ? (await local.get("scans")) ?? [] : [];
+    const pend = scans.length ? `<div class="tip pending-scans"><b style="color:var(--white)">${t("pendingScans", scans.length)}</b>
+      <ul>${scans.map(x => `<li>${esc(x.isbn)} — ${x.action === "own" ? t("keepOwn") : x.action === "wish" ? t("keepWish") : t("keepLook")}</li>`).join("")}</ul></div>` : "";
     if (!ids.length) { app.innerHTML = pend + head + `<p class="empty">${kind === "souhaits" ? t("emptyWish") : t("emptyColl")}</p>`; return; }
-    let { data: vols, error } = await db.from("volumes").select("*, series(id, titre, edition, editeur, langue)").in("id", ids).order("numero");
-    if (error) { // hors ligne : on recompose depuis la copie locale
-      const want = new Set(ids); vols = [];
-      for (const s of state.series) for (const v of (await local.get(`vols:${s.id}`)) ?? [])
-        if (want.has(v.id)) vols.push({ ...v, series: s });
-      vols.sort((a, b) => a.numero - b.numero);
+
+    // 1. tout de suite : ce qu'on a déjà en mémoire
+    const want = new Set(ids);
+    state.mineCache ??= {};
+    state.mineCache[kind] ??= (await local.get(`mine:${state.user.id}:${kind}`)) ?? [];
+    let vols = state.mineCache[kind].filter(v => want.has(v.id));
+    if (vols.length < ids.length) { // tomes cochés depuis : on les complète avec la mémoire des séries
+      const deja = new Set(vols.map(v => v.id));
+      for (const { vols: vs } of mem.values()) for (const v of vs) if (want.has(v.id) && !deja.has(v.id)) {
+        deja.add(v.id); vols.push({ ...v, series: state.series.find(x => x.id === v.serie_id) });
+      }
     }
+    if (vols.length) dessinerMine(kind, pend + head, vols, first); else if (first) chargement();
+    // 2. puis la version à jour du serveur
+    const { data, error } = await avecDelai(db.from("volumes").select("*, series(id, titre, edition, editeur, langue, type, volumes(count))").in("id", ids).order("numero"));
+    if (state.view !== kind) return;
+    if (error) { if (!vols.length) dessinerMine(kind, pend + head, vols, first); return; }
+    state.mineCache[kind] = data;
+    local.set(`mine:${state.user.id}:${kind}`, data);
+    if (signature(vols) !== signature(data) || vols.length !== data.length) dessinerMine(kind, pend + head, data, false);
+  }
+
+  function dessinerMine(kind, haut, vols, first) {
+    state.ouverts ??= new Set(store.get("isekaz.ouverts", []));
+    const hauteur = window.scrollY;
+    const positions = Object.fromEntries([...app.querySelectorAll(".row[data-row]")].map(r => [r.dataset.row, r.scrollLeft]));
     const parSerie = new Map();
-    (vols ?? []).forEach(v => parSerie.set(v.series.id, [...(parSerie.get(v.series.id) ?? []), v]));
-    app.innerHTML = pend + head + [...parSerie.values()].map(vs => `
-      <h3 class="section-title" style="margin-top:26px;cursor:pointer" data-sid="${vs[0].series.id}">${TORII}${esc(vs[0].series.titre)}
-        <span class="meta" style="font-family:Inter;font-size:14px;letter-spacing:0">${esc([vs[0].series.edition, vs[0].series.editeur, (vs[0].series.langue || "fr").toUpperCase()].filter(Boolean).join(" · "))} · ${vs.length}</span></h3>
-      <div class="vols">${vs.map(v => volCell(v, v.numero)).join("")}</div>`).join("");
-    app.querySelectorAll("[data-sid]").forEach(h => h.onclick = () => {
-      const se = state.series.find(x => x.id === +h.dataset.sid); se ? openOeuvre(cleOeuvre(se)) : openSerie(+h.dataset.sid); });
-    bindVols();
+    vols.forEach(v => { const sid = v.serie_id ?? v.series?.id; (parSerie.get(sid) ?? parSerie.set(sid, []).get(sid)).push(v); });
+    const filtre = (state.filtreMine ?? "").toLowerCase();
+    let groupes = [...parSerie.entries()].map(([sid, vs]) => {
+      const se = state.series.find(x => x.id === sid) ?? vs[0].series ?? {};
+      const total = se.volumes?.[0]?.count ?? vs.length;
+      return { sid, se, vs: vs.sort((a, b) => a.numero - b.numero), total };
+    }).filter(g => !filtre || `${g.se.titre} ${g.se.editeur ?? ""}`.toLowerCase().includes(filtre));
+    const tri = state.triMine ?? "alpha";
+    groupes.sort((a, b) => tri === "prog" ? (b.vs.length / b.total) - (a.vs.length / a.total)
+      : tri === "nb" ? b.vs.length - a.vs.length : (a.se.titre ?? "").localeCompare(b.se.titre ?? "", lang));
+    const tousOuverts = groupes.length && groupes.every(g => state.ouverts.has(g.sid));
+    app.innerHTML = haut + `<div class="mine-bar">
+        <input type="search" id="filtreMine" placeholder="${esc(t("filterPh"))}" value="${esc(state.filtreMine ?? "")}">
+        <select id="triMine" aria-label="${esc(t("sortL"))}">
+          <option value="alpha" ${tri === "alpha" ? "selected" : ""}>A → Z</option>
+          <option value="prog" ${tri === "prog" ? "selected" : ""}>${t("sortProg")}</option>
+          <option value="nb" ${tri === "nb" ? "selected" : ""}>${t("sortNb")}</option></select>
+        <button class="btn ghost" id="toutDeplier">${tousOuverts ? t("collapseAll") : t("expandAll")}</button></div>
+      <div class="mine-list">${groupes.map(g => {
+        const ouvert = state.ouverts.has(g.sid);
+        const v0 = g.vs[0], img = v0.photo_url || v0.couverture_url || (v0.isbn13 ? `https://covers.openlibrary.org/b/isbn/${v0.isbn13}-S.jpg?default=false` : "");
+        const pct = Math.min(100, Math.round(g.vs.length / Math.max(g.total, 1) * 100));
+        return `<div class="mine-item ${ouvert ? "open" : ""}">
+          <button class="mine-head" data-toggle="${g.sid}" aria-expanded="${ouvert}">
+            <span class="mine-cover">${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : ""}</span>
+            <span class="mine-info"><b>${esc(g.se.titre ?? "")}</b>
+              <span class="meta">${esc([g.se.edition, g.se.editeur, (g.se.langue || "fr").toUpperCase()].filter(Boolean).join(" · "))}</span>
+              ${kind === "collection" ? `<span class="mine-prog"><i style="width:${pct}%"></i></span>` : ""}</span>
+            <span class="mine-count">${kind === "collection" ? `${g.vs.length}<small> / ${g.total}</small>` : g.vs.length}</span>
+            <span class="mine-chev">${ouvert ? "▴" : "▾"}</span></button>
+          ${ouvert ? `<div class="row" data-row="m-${g.sid}">${g.vs.map(v => tile(v, g.se)).join("")}</div>
+            <button class="link mine-go" data-goto="${g.sid}">${t("seeSerie")} ›</button>` : ""}</div>`;
+      }).join("")}</div>`;
+    const sauver = () => store.set("isekaz.ouverts", [...state.ouverts]);
+    app.querySelectorAll("[data-toggle]").forEach(b => b.onclick = () => {
+      const sid = +b.dataset.toggle;
+      state.ouverts.has(sid) ? state.ouverts.delete(sid) : state.ouverts.add(sid); sauver();
+      dessinerMine(kind, haut, vols, false);
+    });
+    $("toutDeplier").onclick = () => { groupes.forEach(g => tousOuverts ? state.ouverts.delete(g.sid) : state.ouverts.add(g.sid)); sauver(); dessinerMine(kind, haut, vols, false); };
+    $("triMine").onchange = e => { state.triMine = e.target.value; dessinerMine(kind, haut, vols, false); };
+    $("filtreMine").oninput = e => { state.filtreMine = e.target.value; const pos = e.target.selectionStart;
+      dessinerMine(kind, haut, vols, false); const f = $("filtreMine"); f.focus(); f.setSelectionRange(pos, pos); };
+    app.querySelectorAll("[data-goto]").forEach(b => b.onclick = () => {
+      const se = state.series.find(x => x.id === +b.dataset.goto); se ? openOeuvre(cleOeuvre(se)) : openSerie(+b.dataset.goto); });
+    bindTiles(vols);
+    app.querySelectorAll(".row[data-row]").forEach(r => { if (positions[r.dataset.row]) r.scrollLeft = positions[r.dataset.row]; });
+    if (!first) window.scrollTo({ top: hauteur });
   }
 
   // ---------- Page œuvre : toutes les éditions en rangées ----------
@@ -968,6 +1069,22 @@
         ${e.quantite > 1 ? `<span class="dblb">×${e.quantite}</span>` : ""}${!e.quantite && e.souhait ? `<span class="heart">♥</span>` : ""}</div>
       <button class="tick" data-tick aria-label="${esc(e.quantite > 0 ? t("own") : t("own"))}">${e.quantite > 0 ? "✓" : "+"}</button>
       <div class="tile-name">${esc(nom)}</div>${sous ? `<div class="tile-sub">${esc(sous)}</div>` : ""}</div>`;
+  }
+
+  function bindTiles(vols) {
+    const parId = new Map((vols ?? []).map(v => [v.id, v]));
+    app.querySelectorAll(".tile[data-vid]").forEach(el => {
+      const v = parId.get(+el.dataset.vid);
+      if (!v) return;
+      el.onclick = ev => {
+        if (ev.target.closest("[data-tick]")) {
+          const e = state.coll.get(v.id);
+          return e?.quantite > 0 ? ouvrirTome(v) : setEntry(v.id, { quantite: 1 });
+        }
+        ouvrirTome(v);
+      };
+      el.onkeydown = ev => { if (ev.key === "Enter") ouvrirTome(v); };
+    });
   }
 
   function ouvrirTome(v) {
@@ -986,12 +1103,19 @@
     const ordre = e => (state.editionLangs.has(e.langue || "fr") ? 0 : 1) * 1e6 - (e.volumes[0]?.count ?? 0);
     toutes.sort((a, b) => ordre(a) - ordre(b) || (a.edition ? 1 : 0) - (b.edition ? 1 : 0));
     const ids = toutes.map(x => x.id);
-    if (first) { chargement(); window.scrollTo({ top: 0 }); setNav(); }
-    let { data: vols, error } = await avecDelai(db.from("volumes").select("*").in("serie_id", ids).order("numero"));
-    if (error) { vols = []; for (const id of ids) vols.push(...((await local.get(`vols:${id}`)) ?? [])); }
-    else { const par = {}; vols.forEach(v => (par[v.serie_id] ??= []).push(v)); for (const id of ids) await rememberVols(id, par[id] ?? []); }
+    const cache = await volsDe(ids);
+    if (cache.complet) dessinerOeuvre(toutes, cache.vols, first);
+    else if (first) { chargement(); window.scrollTo({ top: 0 }); setNav(); }
+    if (cache.complet && cache.frais) return; // déjà à jour
+    const { data, error } = await avecDelai(db.from("volumes").select("*").in("serie_id", ids).order("numero"));
     if (state.view !== "oeuvre" || state.oeuvre !== key) return; // on a changé de page entre-temps
+    if (error) { if (!cache.complet) dessinerOeuvre(toutes, cache.vols, first); return; }
+    const par = {}; data.forEach(v => (par[v.serie_id] ??= []).push(v));
+    ids.forEach(id => rememberVols(id, par[id] ?? []));
+    if (!cache.complet || signature(cache.vols) !== signature(data)) dessinerOeuvre(toutes, data, first && !cache.complet);
+  }
 
+  function dessinerOeuvre(toutes, vols, first) {
     const s0 = toutes[0];
     const titre = toutes.map(e => e.titre).sort((a, b) => [...b].filter(c => c !== c.toLowerCase()).length - [...a].filter(c => c !== c.toLowerCase()).length)[0];
     const pubs = [...new Set(toutes.map(e => e.public).filter(Boolean))];
@@ -1043,18 +1167,7 @@
 
     app.querySelector(".back").onclick = () => { state.view = "catalogue"; render(); };
     app.querySelectorAll(".ed-head[data-serie]").forEach(b => b.onclick = () => openSerie(+b.dataset.serie));
-    const parId = new Map((vols ?? []).map(v => [v.id, v]));
-    app.querySelectorAll(".tile[data-vid]").forEach(el => {
-      const v = parId.get(+el.dataset.vid);
-      el.onclick = ev => {
-        if (ev.target.closest("[data-tick]")) {
-          const e = state.coll.get(v.id);
-          return e?.quantite > 0 ? ouvrirTome(v) : setEntry(v.id, { quantite: 1 });
-        }
-        ouvrirTome(v);
-      };
-      el.onkeydown = ev => { if (ev.key === "Enter") ouvrirTome(v); };
-    });
+    bindTiles(vols);
     if (!first) {
       app.querySelectorAll(".row[data-row]").forEach(r => { if (positions[r.dataset.row]) r.scrollLeft = positions[r.dataset.row]; });
       if (ouverts) app.querySelector("details.autres")?.setAttribute("open", "");
