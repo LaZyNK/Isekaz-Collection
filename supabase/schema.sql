@@ -110,3 +110,33 @@ alter table public.volumes drop constraint if exists volumes_serie_id_numero_key
 create unique index if not exists volumes_serie_numero_variante_key
   on public.volumes (serie_id, numero, coalesce(variante, ''), coalesce(variante_nom, ''));
 -- + règles d'ajout pour les membres connectés et stockage « photos » (voir la migration dans Supabase)
+
+-- ===== Suivi de lecture, profils publics, classement (migration « lecture_profils_classement ») =====
+alter table public.collection add column if not exists lu boolean not null default false;
+alter table public.collection add column if not exists lu_le timestamptz;
+alter table public.profiles add column if not exists public boolean not null default false;
+alter table public.profiles add column if not exists bio text check (char_length(bio) <= 280);
+create policy "voir les collections publiques" on public.collection for select
+  using (exists (select 1 from public.profiles p where p.id = collection.user_id and p.public));
+create or replace function public.classement(limite int default 50)
+returns table (pseudo text, tomes bigint, series bigint, doubles bigint, lus bigint)
+language sql stable security invoker set search_path = '' as $$
+  select p.pseudo,
+         count(*) filter (where c.quantite > 0) as tomes,
+         count(distinct v.serie_id) filter (where c.quantite > 0) as series,
+         coalesce(sum(greatest(c.quantite - 1, 0)), 0) as doubles,
+         count(*) filter (where c.lu) as lus
+  from public.profiles p
+  join public.collection c on c.user_id = p.id
+  join public.volumes v on v.id = c.volume_id
+  where p.public
+  group by p.pseudo
+  order by tomes desc, series desc
+  limit least(greatest(limite, 1), 200);
+$$;
+grant execute on function public.classement(int) to anon, authenticated;
+
+-- ===== Genres (migration « genres_maj ») : remplis par la fonction « genres » (AniList) =====
+alter table public.series add column if not exists genres_maj timestamptz;
+create index if not exists series_genres_idx on public.series using gin (genres);
+create index if not exists volumes_date_idx on public.volumes (date_parution);

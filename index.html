@@ -232,6 +232,13 @@
   .tile-name { margin-top: 8px; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tile-sub { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   details.autres summary { cursor: pointer; color: var(--muted); margin-top: 22px; }
+  /* ---------- Lecture / onglets ---------- */
+  .tile .lub { position: absolute; top: 6px; right: 6px; font-size: 14px; background: rgba(10,6,7,.75); border-radius: 999px; padding: 1px 5px; }
+  .lu-btn.on { background: rgba(61,220,132,.15); border-color: #3ddc84; color: #bff5d6; }
+  .tabs-mine { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; }
+  .tabs-mine button { flex: 1; white-space: nowrap; background: var(--panel); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; }
+  .tabs-mine button.on { color: var(--white); border-color: var(--red); background: rgba(224,40,60,.12); }
+  .tabs-mine small { opacity: .75; margin-left: 2px; }
   /* ---------- Ma collection : liste compacte ---------- */
   .mine-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
   .mine-bar input { flex: 1 1 160px; }
@@ -273,6 +280,40 @@
     nav { width: 100%; justify-content: space-between; } nav button { flex: 1; padding: 7px 4px; font-size: 13px; white-space: nowrap; }
   }
   @media (prefers-reduced-motion: reduce) { .hero-art { animation: none; } .card, .card:hover { transition: none; transform: none; } }
+  .navbadge { display: inline-block; min-width: 8px; height: 8px; border-radius: 999px; background: var(--red); margin-left: 5px; vertical-align: middle; box-shadow: 0 0 8px var(--red); }
+  .lens-btn { display: flex; justify-content: center; gap: 6px; margin-top: 12px; cursor: pointer; }
+  .plan-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .plan-week { margin: 20px 0 8px; font-family: "Noto Serif JP", serif; color: var(--sakura); font-size: 15px; }
+  .plan-item { display: grid; grid-template-columns: 52px 1fr auto; gap: 12px; align-items: center; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; cursor: pointer; }
+  .plan-item.mine { border-color: rgba(224,40,60,.6); }
+  .plan-item .pc { width: 52px; height: 74px; border-radius: 6px; background: var(--panel-2); overflow: hidden; position: relative; display: grid; place-items: center; color: var(--muted); }
+  .plan-item .pc img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .plan-item b { color: var(--white); display: block; }
+  .plan-item .cd { text-align: center; font-weight: 700; color: var(--white); font-size: 15px; min-width: 56px; }
+  .plan-item .cd small { display: block; color: var(--muted); font-weight: 400; font-size: 11px; }
+  .plan-item .cd.out { color: var(--gold); }
+  .plan-item .cd button { margin-top: 4px; background: none; border: 1px solid var(--line); color: var(--sakura); border-radius: 999px; padding: 2px 9px; }
+  .prof-head { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .prof-ava { width: 64px; height: 64px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, var(--red), var(--red-deep)); display: grid; place-items: center;
+    font-size: 28px; font-weight: 800; color: var(--white); box-shadow: var(--glow); }
+  .lvlbar { height: 8px; background: var(--panel-2); border-radius: 999px; overflow: hidden; margin-top: 6px; width: min(260px, 60vw); }
+  .lvlbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--red), var(--sakura)); }
+  .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+  .bdg { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 6px; text-align: center; font-size: 12px; color: var(--muted); }
+  .bdg span { display: block; font-size: 26px; margin-bottom: 4px; filter: grayscale(1); opacity: .35; }
+  .bdg.got { border-color: var(--gold); color: var(--white); }
+  .bdg.got span { filter: none; opacity: 1; }
+  .rank { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .rank td, .rank th { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+  .rank th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  .rank tr.me td { color: var(--white); background: rgba(224,40,60,.1); }
+  .rank td.n { text-align: right; }
+  .form-prof { display: grid; gap: 10px; max-width: 520px; }
+  .form-prof textarea { min-height: 70px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; }
+  .switch { display: flex; gap: 8px; align-items: center; }
+  .lens-res { display: grid; gap: 8px; margin-top: 10px; }
+  .lens-res button { text-align: left; }
 </style>
 </head>
 <body>
@@ -296,7 +337,8 @@
     <nav id="nav">
       <button data-view="catalogue" class="on" data-i18n="catalogue"></button>
       <button data-view="collection" data-i18n="myCollection"></button>
-      <button data-view="souhaits" data-i18n="wishlist"></button>
+      <button data-view="planning"><span data-i18n="planning"></span><i class="navbadge" id="planBadge" hidden></i></button>
+      <button data-view="profil" data-i18n="profil"></button>
     </nav>
   </div>
 </header>
@@ -319,6 +361,9 @@
     <p class="scan-status" id="scanStatus"></p>
     <form class="manual" id="manualForm"><input id="manualIsbn" inputmode="numeric" maxlength="17" data-i18n-placeholder="isbnPh">
       <button class="btn" type="submit">OK</button></form>
+    <label class="btn ghost lens-btn">📷 <span data-i18n="lens"></span>
+      <input type="file" id="lensInput" accept="image/*" capture="environment" hidden></label>
+    <p class="meta" style="font-size:13px;margin:6px 0 0" data-i18n="lensHint"></p>
   </div>
 </dialog>
 
@@ -389,6 +434,38 @@
       offlineSearch: "La recherche chez les éditeurs a besoin du réseau. Tu peux quand même filtrer le catalogue enregistré.",
       offlineReady: "Ta collection est enregistrée sur cet appareil : elle marchera aussi sans réseau.",
       showMore: n => `Voir plus (${n} autres séries)`,
+      genreL: "Genre :", genresL: { Action: "Action", Adventure: "Aventure", Comedy: "Comédie", Drama: "Drame", Ecchi: "Ecchi", Fantasy: "Fantasy",
+        Horror: "Horreur", "Mahou Shoujo": "Magical girl", Mecha: "Mecha", Music: "Musique", Mystery: "Mystère", Psychological: "Psychologique",
+        Romance: "Romance", "Sci-Fi": "Science-fiction", "Slice of Life": "Tranche de vie", Sports: "Sport", Supernatural: "Surnaturel", Thriller: "Thriller",
+        School: "Vie scolaire", Isekai: "Isekai", Historical: "Historique", "Martial Arts": "Arts martiaux", Survival: "Survie",
+        "Post-Apocalyptic": "Post-apocalyptique", Ghost: "Fantômes", Football: "Football", Basketball: "Basket", Cooking: "Cuisine",
+        Military: "Militaire", Samurai: "Samouraïs", Vampire: "Vampires", "Time Manipulation": "Voyage dans le temps", "Super Power": "Super-pouvoirs",
+        Detective: "Enquête", Medicine: "Médecine", Idol: "Idols" },
+      readMark: "📖 Marquer comme lu", readDone: "📖 Lu ✓", readL: "lus", readOf: (a, b) => `lus ${a} / ${b}`,
+      tab_collection: "Collection", tab_pile: "Pile à lire", tab_souhaits: "Souhaits",
+      pileHint: "Les tomes que tu possèdes mais n'as pas encore lus.", emptyPile: "Rien à lire : tu es à jour ! 🎉",
+      planning: "Planning", profil: "Profil",
+      planTitle: "Planning des sorties", planMine: "Mes séries", planAll: "Tout", planIcs: "📅 Ajouter à mon agenda",
+      planEmpty: "Aucune sortie connue sur cette période.", planEmptyMine: "Aucune sortie prévue dans tes séries pour l'instant. Regarde « Tout » !",
+      planNote: "Dates fournies par les éditeurs et Google Books : elles peuvent bouger. Le catalogue se remplit au fur et à mesure.",
+      weekOf: d => `Semaine du ${d}`, thisWeek: "Cette semaine", out: "Sorti", jMoins: n => n === 0 ? "Aujourd'hui" : n === 1 ? "Demain" : `J-${n}`,
+      alertsOn: "🔔 Activer les notifications", alertsOk: "🔔 Notifications activées", alertsNo: "Notifications bloquées dans les réglages du navigateur.",
+      alertMsg: n => `🔔 ${n} sortie${n > 1 ? "s" : ""} dans tes séries cette semaine — voir le Planning.`,
+      notifTitle: "Isekaz — sorties de la semaine", notifBody: l => l.join(" · "),
+      lens: "Lens : reconnaître une couverture", lensHint: "Pour les coffrets ou objets sans code-barres : prends la couverture en photo, le site lit le titre.",
+      lensReading: "Lecture de la photo…", lensLoading: "Chargement de la lecture de texte (une seule fois)…",
+      lensFound: "Titres reconnus :", lensNone: "Aucune série du catalogue ne correspond.", lensText: "Texte lu (modifiable) :",
+      lensSearch: "Chercher chez les éditeurs", lensOffline: "La lecture du texte a besoin du réseau la première fois.",
+      profTitle: "Mon profil", profLevel: (n, k) => `Niveau ${n} · encore ${k} tome${k > 1 ? "s" : ""} pour le niveau ${n + 1}`,
+      profSeries: "séries", profWish: "souhaits", profPublic: "Profil public (visible dans le classement)", profBio: "Petite présentation",
+      profSave: "Enregistrer", profSaved: "Profil enregistré ✓", profShare: "🔗 Copier le lien de mon profil", profCopied: "Lien copié !",
+      badgesT: "Succès", rankT: "Classement des collectionneurs", rankEmpty: "Personne n'a encore rendu son profil public.",
+      rankCols: ["#", "Pseudo", "Tomes", "Séries", "Lus"], rankYou: "Rends ton profil public pour apparaître ici.",
+      pubPrivate: "Ce profil est privé.", pubNone: "Profil introuvable.", pubSeries: "Ses séries", loginProfil: "Connecte-toi pour avoir ton profil, tes succès et ta place au classement.",
+      bd: { t1: "Premier tome", t10: "10 tomes", t50: "50 tomes", t100: "100 tomes", t250: "250 tomes", t500: "500 tomes", t1000: "1000 tomes",
+        s5: "5 séries", s20: "20 séries", s50: "50 séries", c1: "Série complète", c5: "5 séries complètes", l10: "Lecteur (10 lus)",
+        l100: "Dévoreur (100 lus)", pile0: "Pile à zéro", d1: "Premier double", d10: "Roi des doubles", w10: "Grand rêveur (10 souhaits)",
+        intl: "International", g5: "Éclectique (5 genres)" },
       filterPh: "Filtrer mes séries…", sortL: "Trier", sortProg: "Progression", sortNb: "Nombre de tomes",
       expandAll: "Tout déplier", collapseAll: "Tout replier",
       author: "Auteur", authors: "Auteurs", editions: "Éditions", boxes: "Coffrets & packs", simple: "Édition simple",
@@ -458,6 +535,33 @@
       offlineSearch: "Searching the publishers needs a connection. You can still filter the saved catalogue.",
       offlineReady: "Your collection is saved on this device: it will work without a connection too.",
       showMore: n => `Show more (${n} more series)`,
+      genreL: "Genre:", genresL: { Sports: "Sports", "Mahou Shoujo": "Magical girl", School: "School life", Ghost: "Ghosts", Vampire: "Vampires",
+        "Time Manipulation": "Time travel", "Super Power": "Superpowers", Idol: "Idols" },
+      readMark: "📖 Mark as read", readDone: "📖 Read ✓", readL: "read", readOf: (a, b) => `read ${a} / ${b}`,
+      tab_collection: "Collection", tab_pile: "To read", tab_souhaits: "Wishlist",
+      planning: "Releases", profil: "Profile",
+      planTitle: "Release calendar", planMine: "My series", planAll: "All", planIcs: "📅 Add to my calendar",
+      planEmpty: "No known release in this period.", planEmptyMine: "No upcoming release in your series yet. Check “All”!",
+      planNote: "Dates come from publishers and Google Books and may change. The catalogue keeps growing.",
+      weekOf: d => `Week of ${d}`, thisWeek: "This week", out: "Out", jMoins: n => n === 0 ? "Today" : n === 1 ? "Tomorrow" : `in ${n}d`,
+      alertsOn: "🔔 Turn on notifications", alertsOk: "🔔 Notifications on", alertsNo: "Notifications are blocked in the browser settings.",
+      alertMsg: n => `🔔 ${n} release${n > 1 ? "s" : ""} in your series this week — see Releases.`,
+      notifTitle: "Isekaz — this week's releases", notifBody: l => l.join(" · "),
+      lens: "Lens: recognise a cover", lensHint: "For boxes or items without a barcode: take a photo of the cover and the site reads the title.",
+      lensReading: "Reading the photo…", lensLoading: "Loading text recognition (only once)…",
+      lensFound: "Recognised titles:", lensNone: "No series in the catalogue matches.", lensText: "Text read (editable):",
+      lensSearch: "Search publishers", lensOffline: "Text recognition needs the network the first time.",
+      profTitle: "My profile", profLevel: (n, k) => `Level ${n} · ${k} more volume${k > 1 ? "s" : ""} to level ${n + 1}`,
+      profSeries: "series", profWish: "wishes", profPublic: "Public profile (shown in the leaderboard)", profBio: "About me",
+      profSave: "Save", profSaved: "Profile saved ✓", profShare: "🔗 Copy my profile link", profCopied: "Link copied!",
+      badgesT: "Achievements", rankT: "Collectors leaderboard", rankEmpty: "Nobody has made their profile public yet.",
+      rankCols: ["#", "Name", "Volumes", "Series", "Read"], rankYou: "Make your profile public to appear here.",
+      pubPrivate: "This profile is private.", pubNone: "Profile not found.", pubSeries: "Their series", loginProfil: "Log in to get your profile, achievements and leaderboard spot.",
+      bd: { t1: "First volume", t10: "10 volumes", t50: "50 volumes", t100: "100 volumes", t250: "250 volumes", t500: "500 volumes", t1000: "1000 volumes",
+        s5: "5 series", s20: "20 series", s50: "50 series", c1: "Complete series", c5: "5 complete series", l10: "Reader (10 read)",
+        l100: "Bookworm (100 read)", pile0: "Empty pile", d1: "First double", d10: "King of doubles", w10: "Dreamer (10 wishes)",
+        intl: "International", g5: "Eclectic (5 genres)" },
+      pileHint: "Volumes you own but haven't read yet.", emptyPile: "Nothing to read: you're all caught up! 🎉",
       filterPh: "Filter my series…", sortL: "Sort", sortProg: "Progress", sortNb: "Number of volumes",
       expandAll: "Expand all", collapseAll: "Collapse all",
       author: "Author", authors: "Authors", editions: "Editions", boxes: "Box sets & packs", simple: "Standard edition",
@@ -513,6 +617,7 @@
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const state = { user: null, profile: null, series: [], coll: new Map(), view: "catalogue", serie: null, filterIds: null, limit: 60,
                   types: new Set(store.get("isekaz.types", [])), publics: new Set(store.get("isekaz.publics", [])),
+                  genresF: new Set(store.get("isekaz.genres", [])),
                   editionLangs: new Set(store.get("isekaz.editionLangs", [lang])) };
   const TORII = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 4.5c3 .8 6.5 1.1 10 1.1s7-.3 10-1.1V7c-.9.2-1.8.4-2.8.5V9H21v2h-1.8v9h-2.2v-9H7v9H4.8v-9H3V9h1.8V7.5C3.8 7.4 2.9 7.2 2 7V4.5zM7 7.8V9h4V8c-1.4 0-2.7-.1-4-.2zm6 .2v1h4V7.8c-1.3.1-2.6.2-4 .2z"/></svg>`;
 
@@ -574,10 +679,10 @@
     if (!ops.length) return updateOffline();
     let sent = 0;
     for (const o of ops) {
-      const { error } = (o.quantite === 0 && !o.souhait)
+      const { error } = (o.quantite === 0 && !o.souhait && !o.lu)
         ? await db.from("collection").delete().eq("volume_id", o.volume_id).eq("user_id", state.user.id)
         : await db.from("collection").upsert({ user_id: state.user.id, volume_id: o.volume_id, quantite: o.quantite,
-            souhait: o.souhait, updated_at: o.at }, { onConflict: "user_id,volume_id" });
+            souhait: o.souhait, lu: !!o.lu, lu_le: o.lu_le ?? null, updated_at: o.at }, { onConflict: "user_id,volume_id" });
       if (error) { if (netError(error)) break; } // coupure : on réessaiera plus tard
       delete qu[o.volume_id]; sent++;
     }
@@ -656,7 +761,7 @@
       store.set("isekaz.lastUser", { id: state.user.id });
       const [{ data: p, error: e1 }, { data: c, error: e2 }] = await Promise.all([
         avecDelai(db.from("profiles").select("pseudo").eq("id", state.user.id).maybeSingle()),
-        avecDelai(db.from("collection").select("volume_id, quantite, souhait, volumes(serie_id)")),
+        avecDelai(db.from("collection").select("volume_id, quantite, souhait, lu, lu_le, volumes(serie_id)")),
       ]);
       state.profile = e1 ? await local.get(`profile:${state.user.id}`) : p;
       if (!e1 && p) await local.set(`profile:${state.user.id}`, p);
@@ -664,7 +769,7 @@
         : (c ?? []).map(({ volumes, ...r }) => ({ ...r, serie_id: volumes?.serie_id ?? null }));
       rows.forEach(r => state.coll.set(r.volume_id, r));
       // les changements pas encore envoyés passent devant ce que dit le serveur
-      Object.values(await queueGet()).forEach(o => (o.quantite === 0 && !o.souhait) ? state.coll.delete(o.volume_id) : state.coll.set(o.volume_id, o));
+      Object.values(await queueGet()).forEach(o => (o.quantite === 0 && !o.souhait && !o.lu) ? state.coll.delete(o.volume_id) : state.coll.set(o.volume_id, o));
       await saveColl();
     } else {
       store.set("isekaz.lastUser", null);
@@ -674,13 +779,15 @@
   }
 
   function stats() {
-    let possedes = 0, doubles = 0, souhaits = 0;
+    let possedes = 0, doubles = 0, souhaits = 0, lus = 0, pile = 0;
     for (const r of state.coll.values()) {
       if (r.quantite > 0) possedes++;
+      if (r.lu) lus++;
+      if (r.quantite > 0 && !r.lu) pile++;
       doubles += Math.max(r.quantite - 1, 0);
       if (r.souhait) souhaits++;
     }
-    return { possedes, doubles, souhaits, niveau: 1 + Math.floor(possedes / 10), prochain: 10 - (possedes % 10) };
+    return { possedes, doubles, souhaits, lus, pile, niveau: 1 + Math.floor(possedes / 10), prochain: 10 - (possedes % 10) };
   }
 
   function renderAccount() {
@@ -730,26 +837,27 @@
   // ---------- Collection ----------
   async function setEntry(volumeId, patch) {
     if (!state.user) { openAuth("login"); say(t("loginFirst")); return; }
-    const cur = state.coll.get(volumeId) ?? { volume_id: volumeId, quantite: 0, souhait: false };
+    const cur = state.coll.get(volumeId) ?? { volume_id: volumeId, quantite: 0, souhait: false, lu: false };
     const next = { ...cur, ...patch };
+    if ("lu" in patch) next.lu_le = patch.lu ? new Date().toISOString() : null;
     next.quantite = Math.max(0, Math.min(99, next.quantite));
     if (next.quantite > 0) next.souhait = false; // on l'a : il sort de la liste de souhaits
     const at = new Date().toISOString();
     let error = null;
     if (!isOffline() && !Object.keys(await queueGet()).length) {
-      ({ error } = (next.quantite === 0 && !next.souhait)
+      ({ error } = (next.quantite === 0 && !next.souhait && !next.lu)
         ? await db.from("collection").delete().eq("volume_id", volumeId).eq("user_id", state.user.id)
         : await db.from("collection").upsert({ user_id: state.user.id, volume_id: volumeId, quantite: next.quantite,
-            souhait: next.souhait, updated_at: at }, { onConflict: "user_id,volume_id" }));
+            souhait: next.souhait, lu: !!next.lu, lu_le: next.lu_le ?? null, updated_at: at }, { onConflict: "user_id,volume_id" }));
       if (error && !netError(error)) { say(t("error") + error.message); return; }
     }
     if (isOffline() || error || Object.keys(await queueGet()).length) {
       const qu = await queueGet();
-      qu[volumeId] = { volume_id: volumeId, quantite: next.quantite, souhait: next.souhait, at };
+      qu[volumeId] = { volume_id: volumeId, quantite: next.quantite, souhait: next.souhait, lu: !!next.lu, lu_le: next.lu_le ?? null, at };
       await queueSet(qu);
     }
     if (!next.serie_id) for (const { vols } of mem.values()) { const v = vols.find(x => x.id === volumeId); if (v) { next.serie_id = v.serie_id; break; } }
-    if (next.quantite === 0 && !next.souhait) state.coll.delete(volumeId); else state.coll.set(volumeId, next);
+    if (next.quantite === 0 && !next.souhait && !next.lu) state.coll.delete(volumeId); else state.coll.set(volumeId, next);
     await saveColl();
     renderAccount(); render(); updateOffline();
     if (!isOffline()) flushQueue();
@@ -848,8 +956,17 @@
       <label class="chip ${set.has(c) ? "on" : ""}"><input type="checkbox" ${attr}="${c}" ${set.has(c) ? "checked" : ""}>
       ${esc(names[c])} <small>${counts[c]}</small></label>`).join("")}</div>`;
   }
+  function genreFilters() {
+    const counts = {};
+    regrouper(state.series).forEach(o => new Set(o.eds.flatMap(e => e.genres ?? [])).forEach(g => counts[g] = (counts[g] || 0) + 1));
+    const codes = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).slice(0, 16);
+    if (!codes.length) return "";
+    return `<div class="filters"><span class="label">${t("genreL")}</span>${codes.map(c => `
+      <label class="chip ${state.genresF.has(c) ? "on" : ""}"><input type="checkbox" data-genre="${esc(c)}" ${state.genresF.has(c) ? "checked" : ""}>
+      ${esc(t("genresL")[c] ?? c)} <small>${counts[c]}</small></label>`).join("")}</div>`;
+  }
   function bindFilters() {
-    for (const [attr, set, key] of [["data-type", state.types, "isekaz.types"], ["data-public", state.publics, "isekaz.publics"]]) {
+    for (const [attr, set, key] of [["data-type", state.types, "isekaz.types"], ["data-public", state.publics, "isekaz.publics"], ["data-genre", state.genresF, "isekaz.genres"]]) {
       app.querySelectorAll(`.filters input[${attr}]`).forEach(i => i.onchange = () => {
         const v = i.getAttribute(attr);
         i.checked ? set.add(v) : set.delete(v);
@@ -884,12 +1001,13 @@
     let list = state.series;
     if (state.filterIds) list = list.filter(s => state.filterIds.has(s.id));
     else if (f && !/^\d{13}$/.test(f.replace(/[^0-9]/g, ""))) list = list.filter(s => `${s.titre} ${s.edition ?? ""} ${s.editeur ?? ""}`.toLowerCase().includes(f));
-    list = list.filter(s => (!state.types.size || state.types.has(s.type || "manga")) && (!state.publics.size || state.publics.has(s.public)));
+    list = list.filter(s => (!state.types.size || state.types.has(s.type || "manga")) && (!state.publics.size || state.publics.has(s.public))
+      && (!state.genresF.size || (s.genres ?? []).some(g => state.genresF.has(g))));
     const visible = regrouper(list.filter(s => state.editionLangs.has(s.langue || "fr")));
     const hidden = regrouper(list).length - visible.length;
     const showHero = !f && !state.filterIds;
     app.innerHTML = (showHero ? hero() : "") + chipFilters(t("typeL"), "type", state.types, t("types"), "data-type")
-      + chipFilters(t("publicL"), "public", state.publics, t("publics"), "data-public") + langFilters() +
+      + chipFilters(t("publicL"), "public", state.publics, t("publics"), "data-public") + genreFilters() + langFilters() +
       `<h3 class="section-title">${TORII}${showHero ? t("allSeries") : t("results")}</h3>` +
       (visible.length ? `<div class="series">${visible.slice(0, state.limit).map(oeuvreCard).join("")}</div>` : "") +
       (visible.length > state.limit ? `<p style="text-align:center;margin-top:20px"><button class="btn ghost" id="moreBtn">${t("showMore", visible.length - state.limit)}</button></p>` : "") +
@@ -979,15 +1097,17 @@
   async function renderMine(kind) {
     if (!state.user) { app.innerHTML = `<p class="empty">${t("loginToSee", kind)}</p>`; return; }
     const first = state.mineVue !== kind; state.mineVue = kind;
-    const ids = [...state.coll.values()].filter(r => kind === "souhaits" ? r.souhait : r.quantite > 0).map(r => r.volume_id);
+    const ids = [...state.coll.values()].filter(r => kind === "souhaits" ? r.souhait : kind === "pile" ? r.quantite > 0 && !r.lu : r.quantite > 0).map(r => r.volume_id);
+    const onglets = `<div class="tabs-mine">${["collection", "pile", "souhaits"].map(k => `<button data-mine="${k}" class="${k === kind ? "on" : ""}">${t("tab_" + k)}${
+      k === "pile" ? ` <small>${stats().pile}</small>` : k === "souhaits" ? ` <small>${stats().souhaits}</small>` : ""}</button>`).join("")}</div>`;
     const st = stats();
-    const head = kind === "collection" ? `<div class="stats">
-      <div class="stat"><b>${st.possedes}</b>${t("tomes")}</div><div class="stat"><b>${st.doubles}</b>${t("doublesL")}</div>
-      <div class="stat"><b>${t("lvl")} ${st.niveau}</b>${t("nextLevel", st.prochain)}</div></div>` : "";
+    const head = onglets + (kind === "collection" ? `<div class="stats">
+      <div class="stat"><b>${st.possedes}</b>${t("tomes")}</div><div class="stat"><b>${st.lus}</b>${t("readL")}</div>
+      <div class="stat"><b>${st.doubles}</b>${t("doublesL")}</div></div>` : kind === "pile" ? `<p class="meta" style="margin:0 0 14px">${t("pileHint")}</p>` : "");
     const scans = kind === "collection" ? (await local.get("scans")) ?? [] : [];
     const pend = scans.length ? `<div class="tip pending-scans"><b style="color:var(--white)">${t("pendingScans", scans.length)}</b>
       <ul>${scans.map(x => `<li>${esc(x.isbn)} — ${x.action === "own" ? t("keepOwn") : x.action === "wish" ? t("keepWish") : t("keepLook")}</li>`).join("")}</ul></div>` : "";
-    if (!ids.length) { app.innerHTML = pend + head + `<p class="empty">${kind === "souhaits" ? t("emptyWish") : t("emptyColl")}</p>`; return; }
+    if (!ids.length) { app.innerHTML = pend + head + `<p class="empty">${kind === "souhaits" ? t("emptyWish") : kind === "pile" ? t("emptyPile") : t("emptyColl")}</p>`; bindOnglets(); return; }
 
     // 1. tout de suite : ce qu'on a déjà en mémoire
     const want = new Set(ids);
@@ -1004,10 +1124,15 @@
     // 2. puis la version à jour du serveur
     const { data, error } = await avecDelai(db.from("volumes").select("*, series(id, titre, edition, editeur, langue, type, volumes(count))").in("id", ids).order("numero"));
     if (state.view !== kind) return;
+    data?.sort((a, b) => a.numero - b.numero);
     if (error) { if (!vols.length) dessinerMine(kind, pend + head, vols, first); return; }
     state.mineCache[kind] = data;
     local.set(`mine:${state.user.id}:${kind}`, data);
     if (signature(vols) !== signature(data) || vols.length !== data.length) dessinerMine(kind, pend + head, data, false);
+  }
+
+  function bindOnglets() {
+    app.querySelectorAll("[data-mine]").forEach(b => b.onclick = () => { state.view = b.dataset.mine; render(); });
   }
 
   function dessinerMine(kind, haut, vols, first) {
@@ -1042,7 +1167,8 @@
             <span class="mine-cover">${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : ""}</span>
             <span class="mine-info"><b>${esc(g.se.titre ?? "")}</b>
               <span class="meta">${esc([g.se.edition, g.se.editeur, (g.se.langue || "fr").toUpperCase()].filter(Boolean).join(" · "))}</span>
-              ${kind === "collection" ? `<span class="mine-prog"><i style="width:${pct}%"></i></span>` : ""}</span>
+              ${kind === "collection" ? `<span class="mine-prog"><i style="width:${pct}%"></i></span>
+                <span class="meta" style="font-size:12px">${t("readOf", g.vs.filter(v => state.coll.get(v.id)?.lu).length, g.vs.length)}</span>` : ""}</span>
             <span class="mine-count">${kind === "collection" ? `${g.vs.length}<small> / ${g.total}</small>` : g.vs.length}</span>
             <span class="mine-chev">${ouvert ? "▴" : "▾"}</span></button>
           ${ouvert ? `<div class="row" data-row="m-${g.sid}">${g.vs.map(v => tile(v, g.se)).join("")}</div>
@@ -1060,7 +1186,7 @@
       dessinerMine(kind, haut, vols, false); const f = $("filtreMine"); f.focus(); f.setSelectionRange(pos, pos); };
     app.querySelectorAll("[data-goto]").forEach(b => b.onclick = () => {
       const se = state.series.find(x => x.id === +b.dataset.goto); se ? openOeuvre(cleOeuvre(se)) : openSerie(+b.dataset.goto); });
-    bindTiles(vols);
+    bindTiles(vols); bindOnglets();
     app.querySelectorAll(".row[data-row]").forEach(r => { if (positions[r.dataset.row]) r.scrollLeft = positions[r.dataset.row]; });
     if (!first) window.scrollTo({ top: hauteur });
   }
@@ -1074,7 +1200,8 @@
     const sous = large ? (v.variante_nom && v.variante_nom !== nom ? v.variante_nom : v.contenu) : (v.variante && v.variante_nom ? v.variante_nom : "");
     return `<div class="tile ${large ? "wide" : ""} ${e.quantite > 0 ? "owned" : e.souhait ? "wished" : ""}" data-vid="${v.id}" role="button" tabindex="0">
       <div class="tile-cover">${large ? "" : v.numero}${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : ""}
-        ${e.quantite > 1 ? `<span class="dblb">×${e.quantite}</span>` : ""}${!e.quantite && e.souhait ? `<span class="heart">♥</span>` : ""}</div>
+        ${e.quantite > 1 ? `<span class="dblb">×${e.quantite}</span>` : ""}${!e.quantite && e.souhait ? `<span class="heart">♥</span>` : ""}
+        ${e.lu ? `<span class="lub" title="${esc(t("readDone"))}">📖</span>` : ""}</div>
       <button class="tick" data-tick aria-label="${esc(e.quantite > 0 ? t("own") : t("own"))}">${e.quantite > 0 ? "✓" : "+"}</button>
       <div class="tile-name">${esc(nom)}</div>${sous ? `<div class="tile-sub">${esc(sous)}</div>` : ""}</div>`;
   }
@@ -1123,7 +1250,25 @@
     if (!cache.complet || signature(cache.vols) !== signature(data)) dessinerOeuvre(toutes, data, first && !cache.complet);
   }
 
+  // Genres manquants : on les demande une fois (AniList), puis toutes les éditions de l'œuvre en profitent
+  state.genresDemandes ??= new Set();
+  async function enrichirGenres(toutes, vols) {
+    const key = cleOeuvre(toutes[0]);
+    if (isOffline() || toutes.some(e => e.genres_maj) || state.genresDemandes.has(key)) return;
+    state.genresDemandes.add(key);
+    try {
+      const r = await fetch(`${URL_SB}/functions/v1/genres`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ titre: toutes[0].titre }) });
+      const res = await r.json();
+      if (!res.genres) return;
+      for (const e of toutes) { e.genres = res.genres; e.genres_maj = new Date().toISOString(); if (!e.public && res.public) e.public = res.public; }
+      local.set("series", state.series);
+      if (state.view === "oeuvre" && state.oeuvre === key) dessinerOeuvre(toutes, vols, false);
+    } catch { /* pas grave : on réessaiera à la prochaine visite */ }
+  }
+
   function dessinerOeuvre(toutes, vols, first) {
+    setTimeout(() => enrichirGenres(toutes, vols), 0);
     const s0 = toutes[0];
     const titre = toutes.map(e => e.titre).sort((a, b) => [...b].filter(c => c !== c.toLowerCase()).length - [...a].filter(c => c !== c.toLowerCase()).length)[0];
     const pubs = [...new Set(toutes.map(e => e.public).filter(Boolean))];
@@ -1166,7 +1311,7 @@
       <h2 class="oeuvre-title">${esc(titre)}</h2>
       <div class="oeuvre-type">${esc(types.map(x => t("types")[x] ?? x).join(" · "))}</div>
       ${pubs.length || genres.length ? `<div class="gchips">${pubs.map(p => `<span class="gchip pub">${esc(t("publics")[p])}</span>`).join("")}
-        ${genres.map(g => `<span class="gchip">${esc(g)}</span>`).join("")}</div>` : ""}
+        ${genres.map(g => `<span class="gchip">${esc(t("genresL")[g] ?? g)}</span>`).join("")}</div>` : ""}
       ${auteurs.length ? `<div class="block"><h3>${auteurs.length > 1 ? t("authors") : t("author")}</h3>
         ${auteurs.map(a => `<div class="person"><div><b>${esc(a)}</b><div class="meta">${t("author")}</div></div></div>`).join("")}</div>` : ""}
       <div class="block"><h3>${t("editions")}</h3>${html1}${html2}</div>
@@ -1187,13 +1332,285 @@
     if (first) window.scrollTo({ top: 0 });
   }
 
-  function setNav() { document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.view === state.view)); }
+
+  // ---------- Planning des sorties + alertes ----------
+  const isoJour = d => d.toISOString().slice(0, 10);
+  const lundi = d => { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return isoJour(x); };
+  const mesSeries = () => new Set([...state.coll.values()].filter(r => r.quantite > 0 || r.souhait).map(r => r.serie_id).filter(Boolean));
+  // une sortie compte comme « mes séries » si l'œuvre est suivie (n'importe quelle édition de la même langue)
+  function estMaSerie(v, suivies) {
+    if (suivies.has(v.serie_id)) return true;
+    const se = v.series ?? state.series.find(x => x.id === v.serie_id);
+    if (!se) return false;
+    const k = cleOeuvre(se);
+    return state.series.some(x => suivies.has(x.id) && cleOeuvre(x) === k && (x.langue || "fr") === (se.langue || "fr") && x.editeur === se.editeur);
+  }
+
+  async function chargerPlanning() {
+    const debut = new Date(); debut.setDate(debut.getDate() - 7);
+    const fin = new Date(); fin.setDate(fin.getDate() + 150);
+    if (state.planning && Date.now() - (state.planAt ?? 0) < 10 * 60e3) return state.planning;
+    if (!isOffline()) {
+      const { data, error } = await avecDelai(db.from("volumes")
+        .select("id, serie_id, numero, titre, isbn13, date_parution, couverture_url, photo_url, prix, devise, variante, variante_nom, contenu, series(id, titre, edition, editeur, langue, type)")
+        .gte("date_parution", isoJour(debut)).lte("date_parution", isoJour(fin)).order("date_parution").limit(1000));
+      if (!error && data) { state.planning = data; state.planAt = Date.now(); local.set("planning", data); return data; }
+    }
+    return state.planning ??= (await local.get("planning")) ?? [];
+  }
+
+  async function renderPlanning() {
+    if (!state.planning) chargement();
+    const tous = await chargerPlanning();
+    if (state.view !== "planning") return;
+    state.planMode ??= state.user ? "mine" : "all";
+    const suivies = mesSeries();
+    const auj = isoJour(new Date());
+    let list = tous.filter(v => v.date_parution && state.editionLangs.has(v.series?.langue || "fr"))
+      .sort((a, b) => a.date_parution.localeCompare(b.date_parution) || (a.series?.titre ?? "").localeCompare(b.series?.titre ?? ""));
+    if (state.planMode === "mine") list = list.filter(v => estMaSerie(v, suivies));
+    const semaines = new Map();
+    list.forEach(v => { const k = lundi(v.date_parution); (semaines.get(k) ?? semaines.set(k, []).get(k)).push(v); });
+    const cetteSemaine = lundi(auj);
+    const perm = "Notification" in window ? Notification.permission : "denied";
+    app.innerHTML = `<h3 class="section-title">${TORII}${t("planTitle")}</h3>
+      <div class="plan-bar"><div class="tabs-mine" style="margin:0;flex:1 1 100%">
+        ${state.user ? `<button data-plan="mine" class="${state.planMode === "mine" ? "on" : ""}">${t("planMine")}</button>` : ""}
+        <button data-plan="all" class="${state.planMode === "all" ? "on" : ""}">${t("planAll")}</button></div>
+        ${list.some(v => v.date_parution >= auj) ? `<button class="btn ghost" id="icsBtn">${t("planIcs")}</button>` : ""}
+        ${state.user && "Notification" in window ? `<button class="btn ghost" id="notifBtn" ${perm === "granted" ? "disabled" : ""}>${perm === "granted" ? t("alertsOk") : t("alertsOn")}</button>` : ""}</div>
+      ${list.length ? [...semaines.entries()].map(([wk, vs]) => `<div class="plan-week">${wk === cetteSemaine ? t("thisWeek") : t("weekOf", fmtDate(wk))}</div>
+        ${vs.map(v => {
+          const se = v.series ?? {}, n = joursAvant(v.date_parution), e = state.coll.get(v.id) ?? {};
+          const img = v.photo_url || v.couverture_url || (v.isbn13 ? `https://covers.openlibrary.org/b/isbn/${v.isbn13}-S.jpg?default=false` : "");
+          return `<div class="plan-item ${estMaSerie(v, suivies) ? "mine" : ""}" data-pv="${v.id}">
+            <div class="pc">${v.numero}${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : ""}</div>
+            <div><b>${esc(se.titre ?? "")} — ${v.variante ? esc(v.variante_nom || t("variantes")[v.variante] || "") : `${t("tome")} ${v.numero}`}</b>
+              <span class="meta">${esc([se.edition, se.editeur, fmtDate(v.date_parution), v.prix ? fmtPrix(v.prix, v.devise) : null].filter(Boolean).join(" · "))}</span></div>
+            <div class="cd ${n < 0 ? "out" : ""}">${n < 0 ? t("out") : t("jMoins", n)}
+              ${e.quantite > 0 ? `<small>✓</small>` : state.user ? `<button data-pw="${v.id}" aria-label="${esc(t("wishT"))}">${e.souhait ? "♥" : "♡"}</button>` : ""}</div></div>`;
+        }).join("")}`).join("")
+        : `<p class="empty">${state.planMode === "mine" ? t("planEmptyMine") : t("planEmpty")}</p>`}
+      <p class="meta" style="font-size:12px;margin-top:18px">${t("planNote")}</p>`;
+    const parId = new Map(list.map(v => [v.id, v]));
+    app.querySelectorAll("[data-plan]").forEach(b => b.onclick = () => { state.planMode = b.dataset.plan; renderPlanning(); });
+    app.querySelectorAll("[data-pv]").forEach(el => el.onclick = ev => {
+      const v = parId.get(+el.dataset.pv);
+      if (ev.target.closest("[data-pw]")) { const e = state.coll.get(v.id) ?? {}; setEntry(v.id, { souhait: !e.souhait }); return; }
+      ouvrirTome(v);
+    });
+    const ics = $("icsBtn");
+    if (ics) ics.onclick = () => telechargerIcs(list.filter(v => v.date_parution >= auj));
+    const nb = $("notifBtn");
+    if (nb) nb.onclick = async () => { const r = await Notification.requestPermission(); if (r !== "granted") say(t("alertsNo")); renderPlanning(); verifierAlertes(); };
+    setNav();
+  }
+
+  function telechargerIcs(vols) {
+    const j = d => d.replaceAll("-", "");
+    const lendemain = d => { const x = new Date(d + "T12:00:00"); x.setDate(x.getDate() + 1); return j(isoJour(x)); };
+    const echap = x => String(x ?? "").replace(/[\\,;]/g, m => "\\" + m).replace(/\n/g, " ");
+    const lignes = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Isekaz Collection//FR", "CALSCALE:GREGORIAN"];
+    const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+    for (const v of vols) lignes.push("BEGIN:VEVENT", `UID:isekaz-${v.id}@isekaz`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${j(v.date_parution)}`,
+      `DTEND;VALUE=DATE:${lendemain(v.date_parution)}`, `SUMMARY:${echap(`${v.series?.titre ?? ""} — ${t("tome")} ${v.numero}`)}`,
+      `DESCRIPTION:${echap([v.series?.editeur, v.isbn13].filter(Boolean).join(" · "))}`, "END:VEVENT");
+    lignes.push("END:VCALENDAR");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([lignes.join("\r\n")], { type: "text/calendar" }));
+    a.download = "isekaz-sorties.ics"; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }
+
+  // Alerte : sorties de mes séries d'ici 7 jours. Pastille sur « Planning », message une fois, notification si autorisée.
+  async function verifierAlertes() {
+    if (!state.user) { $("planBadge").hidden = true; return; }
+    const tous = await chargerPlanning().catch(() => []);
+    const suivies = mesSeries();
+    const proches = tous.filter(v => { const n = joursAvant(v.date_parution); return n >= 0 && n <= 7 && estMaSerie(v, suivies) && !(state.coll.get(v.id)?.quantite > 0); });
+    $("planBadge").hidden = !proches.length;
+    const vus = new Set(store.get("isekaz.alertes", []));
+    const nouveaux = proches.filter(v => !vus.has(v.id));
+    if (!nouveaux.length) return;
+    store.set("isekaz.alertes", [...vus, ...nouveaux.map(v => v.id)].slice(-500));
+    if (state.view !== "planning") say(t("alertMsg", proches.length));
+    if ("Notification" in window && Notification.permission === "granted") {
+      const corps = t("notifBody", nouveaux.slice(0, 4).map(v => `${v.series?.titre ?? ""} ${v.numero} (${t("jMoins", joursAvant(v.date_parution))})`));
+      try { (await navigator.serviceWorker?.ready)?.showNotification(t("notifTitle"), { body: corps, icon: "assets/icon-192.png", tag: "isekaz-sorties" }); }
+      catch { try { new Notification(t("notifTitle"), { body: corps, icon: "assets/icon-192.png" }); } catch { /* tant pis */ } }
+    }
+  }
+
+  // ---------- Succès, profil, classement ----------
+  const BADGES = [
+    ["t1", "📕", x => x.tomes >= 1], ["t10", "📚", x => x.tomes >= 10], ["t50", "🗂️", x => x.tomes >= 50], ["t100", "🏯", x => x.tomes >= 100],
+    ["t250", "⛩️", x => x.tomes >= 250], ["t500", "🐉", x => x.tomes >= 500], ["t1000", "👑", x => x.tomes >= 1000],
+    ["s5", "🌸", x => x.series >= 5], ["s20", "🎴", x => x.series >= 20], ["s50", "🗾", x => x.series >= 50],
+    ["c1", "✅", x => x.completes >= 1], ["c5", "🏆", x => x.completes >= 5],
+    ["l10", "📖", x => x.lus >= 10], ["l100", "🦉", x => x.lus >= 100], ["pile0", "🧘", x => x.tomes >= 10 && x.tomes === x.lusPossedes],
+    ["d1", "♊", x => x.doubles >= 1], ["d10", "🃏", x => x.doubles >= 10], ["w10", "💭", x => x.souhaits >= 10],
+    ["intl", "🌍", x => x.langues >= 2], ["g5", "🎭", x => x.genres >= 5],
+  ];
+  function bilan(rows) {
+    const poss = rows.filter(r => r.quantite > 0);
+    const parSerie = {};
+    poss.forEach(r => { if (r.serie_id) parSerie[r.serie_id] = (parSerie[r.serie_id] || 0) + 1; });
+    const ses = Object.keys(parSerie).map(id => state.series.find(x => x.id === +id)).filter(Boolean);
+    return {
+      tomes: poss.length, series: Object.keys(parSerie).length, lus: rows.filter(r => r.lu).length,
+      lusPossedes: poss.filter(r => r.lu).length, doubles: poss.reduce((a, r) => a + r.quantite - 1, 0), souhaits: rows.filter(r => r.souhait).length,
+      completes: ses.filter(se => (se.volumes?.[0]?.count ?? 0) > 0 && parSerie[se.id] >= se.volumes[0].count).length,
+      langues: new Set(ses.map(se => se.langue || "fr")).size, genres: new Set(ses.flatMap(se => se.genres ?? [])).size,
+    };
+  }
+  const badgesHtml = b => `<div class="badges">${BADGES.map(([k, ico, ok]) => `<div class="bdg ${ok(b) ? "got" : ""}"><span>${ico}</span>${esc(t("bd")[k])}</div>`).join("")}</div>`;
+  const statsHtml = b => `<div class="stats"><div class="stat"><b>${b.series}</b>${t("profSeries")}</div><div class="stat"><b>${b.tomes}</b>${t("tomes")}</div>
+    <div class="stat"><b>${b.lus}</b>${t("readL")}</div><div class="stat"><b>${b.doubles}</b>${t("doublesL")}</div><div class="stat"><b>${b.souhaits}</b>${t("profWish")}</div></div>`;
+
+  async function classementHtml(moi) {
+    if (isOffline()) return "";
+    const { data, error } = await avecDelai(db.rpc("classement", { limite: 50 }));
+    if (error) return "";
+    const c = t("rankCols");
+    return `<h3 class="section-title" style="margin-top:28px">🏆 ${t("rankT")}</h3>
+      ${data?.length ? `<table class="rank"><tr><th>${c[0]}</th><th>${c[1]}</th><th class="n">${c[2]}</th><th class="n">${c[3]}</th><th class="n">${c[4]}</th></tr>
+        ${data.map((r, i) => `<tr class="${r.pseudo === moi ? "me" : ""}"><td>${i < 3 ? ["🥇", "🥈", "🥉"][i] : i + 1}</td>
+          <td><button class="link" data-pseudo="${esc(r.pseudo)}">${esc(r.pseudo)}</button></td>
+          <td class="n">${r.tomes}</td><td class="n">${r.series}</td><td class="n">${r.lus}</td></tr>`).join("")}</table>` : `<p class="empty">${t("rankEmpty")}</p>`}`;
+  }
+  const bindPseudos = () => app.querySelectorAll("[data-pseudo]").forEach(b => b.onclick = () => ouvrirProfil(b.dataset.pseudo));
+  function ouvrirProfil(pseudo) { state.view = "u"; state.pseudoVu = pseudo; history.replaceState(null, "", "#u=" + encodeURIComponent(pseudo)); render(); }
+
+  async function renderProfil() {
+    if (!state.user) { app.innerHTML = `<p class="empty">${t("loginProfil")}</p>` + await classementHtml(null); bindPseudos(); setNav(); return; }
+    if (!isOffline() && !state.profile?.hasOwnProperty("public")) {
+      const { data } = await avecDelai(db.from("profiles").select("pseudo, public, bio").eq("id", state.user.id).maybeSingle());
+      if (data) { state.profile = data; local.set(`profile:${state.user.id}`, data); }
+    }
+    if (state.view !== "profil") return;
+    const p = state.profile ?? {}, st = stats(), b = bilan([...state.coll.values()]);
+    app.innerHTML = `<div class="prof-head"><div class="prof-ava">${esc((p.pseudo ?? "?")[0].toUpperCase())}</div>
+        <div><h2 style="margin:0">${esc(p.pseudo ?? "")}</h2><div class="meta">${t("profLevel", st.niveau, st.prochain)}</div>
+          <div class="lvlbar"><i style="width:${(10 - st.prochain) * 10}%"></i></div></div></div>
+      <div style="margin-top:16px">${statsHtml(b)}</div>
+      <h3 class="section-title" style="margin-top:24px">✦ ${t("badgesT")} <small class="meta" style="font-family:Inter;font-size:14px">${BADGES.filter(([, , ok]) => ok(b)).length} / ${BADGES.length}</small></h3>
+      ${badgesHtml(b)}
+      <h3 class="section-title" style="margin-top:28px">${TORII}${t("profTitle")}</h3>
+      <form class="form-prof" id="profForm">
+        <label class="switch"><input type="checkbox" id="pPublic" ${p.public ? "checked" : ""}> ${t("profPublic")}</label>
+        <label>${t("profBio")}<br><textarea id="pBio" maxlength="280" style="width:100%">${esc(p.bio ?? "")}</textarea></label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="submit">${t("profSave")}</button>
+          ${p.public ? `<button class="btn ghost" type="button" id="shareBtn">${t("profShare")}</button>` : ""}</div></form>
+      <div id="rankBox"></div>`;
+    $("profForm").onsubmit = async e => {
+      e.preventDefault();
+      const maj = { public: $("pPublic").checked, bio: $("pBio").value.trim() || null };
+      const { error } = await db.from("profiles").update(maj).eq("id", state.user.id);
+      if (error) return say(t("error") + error.message);
+      state.profile = { ...p, ...maj }; local.set(`profile:${state.user.id}`, state.profile); say(t("profSaved")); renderProfil();
+    };
+    const sh = $("shareBtn");
+    if (sh) sh.onclick = async () => {
+      const url = `${location.origin}${location.pathname}#u=${encodeURIComponent(p.pseudo)}`;
+      try { if (navigator.share) await navigator.share({ title: "Isekaz Collection", url }); else { await navigator.clipboard.writeText(url); say(t("profCopied")); } } catch { /* annulé */ }
+    };
+    $("rankBox").innerHTML = (await classementHtml(p.pseudo)) + (p.public ? "" : `<p class="meta">${t("rankYou")}</p>`);
+    bindPseudos(); setNav();
+  }
+
+  async function renderPublic(pseudo) {
+    chargement();
+    const back = `<button class="back">${t("back")}</button>`;
+    const { data: p } = await avecDelai(db.from("profiles").select("id, pseudo, public, bio").eq("pseudo", pseudo).maybeSingle());
+    if (state.view !== "u") return;
+    const fin = html => { app.innerHTML = back + html; app.querySelector(".back").onclick = () => { history.replaceState(null, "", location.pathname); state.view = "profil"; render(); }; setNav(); };
+    if (!p) return fin(`<p class="empty">${t("pubNone")}</p>`);
+    if (!p.public && p.id !== state.user?.id) return fin(`<p class="empty">${t("pubPrivate")}</p>`);
+    const { data: rows } = await avecDelai(db.from("collection").select("quantite, souhait, lu, volumes(serie_id)").eq("user_id", p.id).limit(10000));
+    const rs = (rows ?? []).map(r => ({ ...r, serie_id: r.volumes?.serie_id }));
+    const b = bilan(rs);
+    const parSerie = {};
+    rs.filter(r => r.quantite > 0).forEach(r => parSerie[r.serie_id] = (parSerie[r.serie_id] || 0) + 1);
+    const ses = Object.entries(parSerie).map(([id, n]) => ({ se: state.series.find(x => x.id === +id), n })).filter(x => x.se)
+      .sort((a, c) => a.se.titre.localeCompare(c.se.titre, lang));
+    fin(`<div class="prof-head"><div class="prof-ava">${esc(p.pseudo[0].toUpperCase())}</div>
+        <div><h2 style="margin:0">${esc(p.pseudo)}</h2><div class="meta">${t("lvl")} ${1 + Math.floor(b.tomes / 10)}</div>
+        ${p.bio ? `<p style="margin:6px 0 0">${esc(p.bio)}</p>` : ""}</div></div>
+      <div style="margin-top:16px">${statsHtml(b)}</div>
+      <h3 class="section-title" style="margin-top:24px">✦ ${t("badgesT")}</h3>${badgesHtml(b)}
+      <h3 class="section-title" style="margin-top:24px">${TORII}${t("pubSeries")}</h3>
+      <div class="mine-list">${ses.map(({ se, n }) => `<button class="mine-head" data-o="${se.id}" style="border:1px solid var(--line);border-radius:12px;margin-bottom:6px">
+        <span class="mine-info"><b>${esc(se.titre)}</b><span class="meta">${esc([se.edition, se.editeur].filter(Boolean).join(" · "))}</span></span>
+        <span class="mine-count">${n}<small> / ${se.volumes?.[0]?.count ?? n}</small></span></button>`).join("")}</div>`);
+    app.querySelectorAll("[data-o]").forEach(x => x.onclick = () => { const se = state.series.find(y => y.id === +x.dataset.o); if (se) openOeuvre(cleOeuvre(se)); });
+  }
+
+  // ---------- Lens : reconnaître une couverture en photo ----------
+  const TESS = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+  const normL = x => String(x ?? "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  function chargerTesseract() {
+    return window.Tesseract ? Promise.resolve(window.Tesseract) : new Promise((ok, ko) => {
+      const sc = document.createElement("script"); sc.src = TESS; sc.onload = () => ok(window.Tesseract); sc.onerror = ko; document.head.appendChild(sc);
+    });
+  }
+  function rapprocher(texte) {
+    const plat = " " + normL(texte) + " ", mots = new Set(plat.split(" ").filter(m => m.length >= 2));
+    return regrouper(state.series).map(o => {
+      const tt = normL(o.eds[0].titre), tm = tt.split(" ").filter(m => m.length >= 2);
+      if (!tm.length) return null;
+      const score = plat.includes(" " + tt + " ") ? 1 + tt.length / 100 : tm.filter(m => mots.has(m)).length / tm.length;
+      return score >= .6 && (tm.length > 1 || tt.length >= 4) ? { o, score } : null;
+    }).filter(Boolean).sort((a, b) => b.score - a.score).slice(0, 6);
+  }
+  async function lens(fichier) {
+    stopScanner(); $("scanner").close();
+    const fb = $("ficheBody");
+    $("fiche").showModal();
+    fb.innerHTML = `<p class="meta">${t("lensReading")}</p>`;
+    // 1. un code-barres sur la photo ? (plus fiable que la lecture du texte)
+    try {
+      if ("BarcodeDetector" in window) {
+        const bmp = await createImageBitmap(fichier);
+        const codes = await new BarcodeDetector({ formats: ["ean_13", "upc_a", "ean_8"] }).detect(bmp);
+        const ok = codes.map(c => eanValide(c.rawValue)).find(Boolean);
+        if (ok) { $("fiche").close(); return openFiche(ok); }
+      }
+    } catch { /* pas de détecteur */ }
+    // 2. lecture du texte de la couverture
+    let texte = "";
+    try {
+      if (!window.Tesseract) fb.innerHTML = `<p class="meta">${t("lensLoading")}</p>`;
+      const T = await chargerTesseract();
+      fb.innerHTML = `<p class="meta">${t("lensReading")}</p>`;
+      const r = await T.recognize(fichier, "fra+eng");
+      texte = (r?.data?.text ?? "").replace(/\s+/g, " ").trim();
+    } catch { fb.innerHTML = `<p class="empty">${t("lensOffline")}</p>`; return; }
+    dessinerLens(texte);
+  }
+  function dessinerLens(texte) {
+    const res = rapprocher(texte), fb = $("ficheBody");
+    fb.innerHTML = `${res.length ? `<b>${t("lensFound")}</b><div class="lens-res">${res.map(({ o }) => `<button class="btn ghost" data-lo="${esc(cleOeuvre(o.eds[0]))}">
+        ${esc(o.eds[0].titre)} <small class="meta">${esc(t("nEditions", o.eds.length))}</small></button>`).join("")}</div>` : `<p class="empty">${t("lensNone")}</p>`}
+      <p style="margin-top:14px">${t("lensText")}</p>
+      <textarea id="lensTxt" style="width:100%;min-height:70px;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px">${esc(texte)}</textarea>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn ghost" id="lensRe">↻</button>
+        <button class="btn" id="lensGo" ${isOffline() ? "disabled" : ""}>${t("lensSearch")}</button></div>`;
+    fb.querySelectorAll("[data-lo]").forEach(b => b.onclick = () => { $("fiche").close(); openOeuvre(b.dataset.lo); });
+    $("lensRe").onclick = () => dessinerLens($("lensTxt").value);
+    $("lensGo").onclick = () => { const x = $("lensTxt").value.trim().split(/\s+/).slice(0, 6).join(" "); $("fiche").close(); q.value = x; state.view = "catalogue"; render(); searchOnline(x); };
+  }
+
+  const rubrique = v => ["pile", "souhaits"].includes(v) ? "collection" : v === "u" ? "profil" : v;
+  function setNav() { document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.view === rubrique(state.view))); }
 
   function render() {
     setNav();
     if (state.view === "serie") return openSerie(state.serie);
     if (state.view === "oeuvre") return openOeuvre(state.oeuvre);
-    if (state.view === "collection" || state.view === "souhaits") return renderMine(state.view);
+    if (["collection", "pile", "souhaits"].includes(state.view)) return renderMine(state.view);
+    if (state.view === "planning") return renderPlanning();
+    if (state.view === "profil") return renderProfil();
+    if (state.view === "u") return renderPublic(state.pseudoVu);
     renderCatalogue();
   }
 
@@ -1414,14 +1831,16 @@
       ${v.description ? `<p class="desc short" id="desc">${esc(v.description)}</p><button class="link" id="descMore">${t("more")}</button>
         ${s.langue && s.langue !== lang ? `<p class="meta" style="font-size:12px">${t("descOther")}</p>` : ""}` : ""}
       <div class="prod-actions">${actions}</div>
-      <div class="prod-actions"><button class="btn ghost" id="seeSerie">${t("seeSerie")}</button></div>`;
+      <div class="prod-actions"><button class="btn ghost lu-btn ${e.lu ? "on" : ""}" data-a="lu" aria-pressed="${!!e.lu}">${e.lu ? t("readDone") : t("readMark")}</button>
+        <button class="btn ghost" id="seeSerie">${t("seeSerie")}</button></div>`;
     const more = $("descMore");
     if (more) more.onclick = () => { const d = $("desc"); d.classList.toggle("short"); more.textContent = d.classList.contains("short") ? t("more") : t("less"); };
     $("seeSerie").onclick = () => { $("fiche").close(); const se = state.series.find(x => x.id === v.serie_id) ?? s;
       se?.titre ? openOeuvre(cleOeuvre(se)) : openSerie(v.serie_id); };
     $("ficheBody").querySelectorAll("button[data-a]").forEach(b => b.onclick = async () => {
       const cur = state.coll.get(v.id) ?? { quantite: 0, souhait: false };
-      const patch = { own: { quantite: 1 }, plus: { quantite: cur.quantite + 1 }, minus: { quantite: cur.quantite - 1 }, wish: { souhait: !cur.souhait } }[b.dataset.a];
+      const patch = { own: { quantite: 1 }, plus: { quantite: cur.quantite + 1 }, minus: { quantite: cur.quantite - 1 }, wish: { souhait: !cur.souhait },
+        lu: { lu: !cur.lu } }[b.dataset.a];
       await setEntry(v.id, patch);
       if (state.user) renderFiche(v);
     });
@@ -1563,6 +1982,7 @@
   $("scanner").addEventListener("close", stopScanner);
   $("ficheClose").onclick = () => $("fiche").close();
   $("manualForm").addEventListener("submit", e => { e.preventDefault(); found($("manualIsbn").value); });
+  $("lensInput").onchange = e => { const f = e.target.files?.[0]; e.target.value = ""; if (f) lens(f); };
 
   // ---------- Application installable + hors ligne ----------
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("sw.js").catch(() => {});
@@ -1574,13 +1994,16 @@
     if (installEvt) { installEvt.prompt(); await installEvt.userChoice; installEvt = null; $("installBtn").classList.remove("show"); }
     else say(t("iosInstall"));
   };
-  addEventListener("online", async () => { await flushQueue(); await loadSeries(); await loadUser(); render(); await resolveScans(); await syncCatalogue(); prefetchForOffline(); });
+  addEventListener("online", async () => { await flushQueue(); await loadSeries(); await loadUser(); render(); await resolveScans(); await syncCatalogue(); prefetchForOffline(); verifierAlertes(); });
   addEventListener("offline", () => updateOffline());
 
   applyI18n();
   await loadSeries();
   await loadUser();
+  const lien = location.hash.match(/^#u=(.+)$/);
+  if (lien) { state.view = "u"; state.pseudoVu = decodeURIComponent(lien[1]); }
   render();
+  verifierAlertes();
   flushQueue().then(resolveScans).then(syncCatalogue).then(prefetchForOffline);
   // sans détecteur intégré, on garde ZXing en réserve pour pouvoir scanner hors ligne
   if (!("BarcodeDetector" in window) && !isOffline()) setTimeout(() => import(ZXING).catch(() => {}), 4000);
