@@ -44,8 +44,18 @@ EDITEURS = {
     "Nobi Nobi": ("Nobi nobi", True), "Isan Manga": ("Isan", True), "Black Box": ("Black box", True),
     "Kotoji": ("Kotoji", True), "Naban": ("Naban", True), "Shiba": ("Shiba", True), "Hana": ("Hana", True),
     "Dupuis": ("Dupuis", False), "Bamboo": ("Bamboo", False), "Mana Books": ("Mana books", False),
+    "Ankama": ("Ankama", False), "Le Lézard noir": ("Lézard noir", True), "IMHO": ("IMHO", True),
+    "Asuka": ("Asuka", True), "Kami": ("Kami", True), "Hikari": ("Hikari", True), "Nazca": ("Nazca", True),
+    "Samji": ("Samji", True), "Ynnis": ("Ynnis", False), "Rue de Sèvres": ("Rue de Sèvres", False),
+    "Dargaud": ("Dargaud", False), "J'ai lu": ("J'ai lu", False), "Clair de Lune": ("Clair de lune", False),
 }
-MANGA_MOTS = re.compile(r"manga|sh[oōô]nen|shounen|seinen|sh[oōô]jo|shoujo|josei|kodomo|webtoon|manhwa|manhua|ki-oon|tonkam|kurokawa", re.I)
+# Labels manga publiés sous le nom d'un autre éditeur à la BnF : on les cherche par leur nom de collection.
+# Éditeur affiché -> (texte cherché partout dans la notice, motif qui doit apparaître dans la collection)
+COLLECTIONS = {
+    "Doki-Doki": ("Doki-doki", r"doki"),   # label manga de Bamboo (Classroom for Heroes…)
+    "Sakka": ("Sakka", r"sakka"),          # label manga de Casterman
+}
+MANGA_MOTS = re.compile(r"manga|sh[oōô]nen|shounen|seinen|sh[oōô]jo|shoujo|josei|kodomo|webtoon|manhwa|manhua|ki-oon|tonkam|kurokawa|doki|sakka|yaoi|yuri|boy'?s love", re.I)
 COLLECTOR = re.compile(r"collector|[ée]dition limit[ée]e|tirage limit[ée]", re.I)
 STARTER = re.compile(r"starter|pack d[ée]couverte|kit de d[ée]marrage", re.I)
 BUNDLE = re.compile(r"bundle|pack\b|lot de", re.I)
@@ -190,8 +200,8 @@ def analyse(rec):
             "langue": langue, "taille": taille, "prix": prix, "annee": annee, "genre": genre, "auteur": auteur or None}
 
 
-def bnf(editeur_bnf: str, annee: int):
-    q = f'bib.publisher all "{editeur_bnf}" and bib.doctype any "a" and bib.date any "{annee}"'
+def bnf(editeur_bnf: str, annee: int, index: str = "publisher"):
+    q = f'bib.{index} all "{editeur_bnf}" and bib.doctype any "a" and bib.date any "{annee}"'
     start, total = 1, None
     while total is None or start <= total:
         root = None
@@ -286,10 +296,11 @@ def main():
     a = p.parse_args()
     if a.nouveautes:
         a.depuis, a.jusqua = dt.date.today().year - 1, dt.date.today().year + 1
-    noms = list(EDITEURS) if a.editeurs.strip().lower() == "tous" else [e.strip() for e in a.editeurs.split(",") if e.strip()]
-    inconnus = [e for e in noms if e not in EDITEURS]
+    tous = list(EDITEURS) + list(COLLECTIONS)
+    noms = tous if a.editeurs.strip().lower() == "tous" else [e.strip() for e in a.editeurs.split(",") if e.strip()]
+    inconnus = [e for e in noms if e not in tous]
     if inconnus:
-        sys.exit(f"❌ éditeur(s) inconnu(s) : {inconnus}. Connus : {', '.join(EDITEURS)}")
+        sys.exit(f"❌ éditeur(s) inconnu(s) : {inconnus}. Connus : {', '.join(tous)}")
 
     base = None
     if not a.dry_run:
@@ -301,13 +312,17 @@ def main():
 
     bilan = {"notices": 0, "tomes": 0, "series": set(), "nouveaux": 0}
     for nom in noms:
-        cherche, que_manga = EDITEURS[nom]
+        if nom in COLLECTIONS:
+            cherche, motif = COLLECTIONS[nom]
+            index, que_manga, exige = "anywhere", True, re.compile(motif, re.I)
+        else:
+            (cherche, que_manga), index, exige = EDITEURS[nom], "publisher", None
         print(f"\n📚 {nom}  ({a.depuis}–{a.jusqua})")
         tomes = {}
         for annee in range(a.depuis, a.jusqua + 1):
             n_avant, vus, rejets = len(tomes), 0, {"illisible": 0, "étranger": 0, "pas manga": 0}
             exemples = []
-            for rec in bnf(cherche, annee):
+            for rec in bnf(cherche, annee, index):
                 bilan["notices"] += 1
                 vus += 1
                 t = analyse(rec)
@@ -316,6 +331,9 @@ def main():
                     continue
                 if t["langue"] and t["langue"] != "fre":
                     rejets["étranger"] += 1
+                    continue
+                if exige and not exige.search(t["genre"]):  # le mot cherché doit être la collection, pas le résumé
+                    rejets["pas manga"] += 1
                     continue
                 if not que_manga and not MANGA_MOTS.search(t["genre"]):
                     rejets["pas manga"] += 1

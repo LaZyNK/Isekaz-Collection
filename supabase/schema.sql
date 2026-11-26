@@ -156,3 +156,12 @@ create policy "ne plus suivre" on public.suivis for delete to authenticated usin
 
 -- ===== Compléter les tomes connus (migration « completer_volumes ») : couverture, date, prix, résumé venus de Google =====
 -- Voir la migration dans Supabase : fonction public.completer_volumes(jsonb), réservée à la clé serveur.
+
+-- ===== Profil (photo, bannière, réseaux) et autres titres (migration « profil_photos_reseaux_titres_alt ») =====
+alter table public.profiles add column if not exists avatar_url text check (char_length(avatar_url) <= 500);
+alter table public.profiles add column if not exists banniere_url text check (char_length(banniere_url) <= 500);
+alter table public.profiles add column if not exists reseaux jsonb not null default '{}'::jsonb
+  check (jsonb_typeof(reseaux) = 'object' and pg_column_size(reseaux) < 4000);
+alter table public.series add column if not exists titres_alt text[] not null default '{}';
+alter table public.series add column if not exists titres_maj timestamptz;
+create index if not exists series_titres_alt_idx on public.series using gin (titres_alt);

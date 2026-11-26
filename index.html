@@ -312,6 +312,48 @@
   .form-prof { display: grid; gap: 10px; max-width: 520px; }
   .form-prof textarea { min-height: 70px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: inherit; }
   .switch { display: flex; gap: 8px; align-items: center; }
+  .hero-cta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  .home-sec { margin-top: 30px; }
+  .home-sec h3 .link { font-family: Inter, sans-serif; font-size: 14px; margin-left: auto; }
+  .strip { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 12px; scroll-snap-type: x proximity; }
+  .strip > * { flex: 0 0 auto; scroll-snap-align: start; }
+  .rel { width: 128px; cursor: pointer; }
+  .rel .pc { width: 128px; height: 182px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); position: relative; overflow: hidden;
+    display: grid; place-items: center; color: var(--muted); font-family: "Bebas Neue", sans-serif; font-size: 34px; }
+  .rel .pc img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .rel .cd { position: absolute; left: 6px; top: 6px; background: rgba(10,6,7,.85); color: var(--white); font: 600 12px Inter, sans-serif; padding: 3px 7px; border-radius: 999px; }
+  .rel b { display: block; font-size: 13px; margin-top: 6px; color: var(--white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rel span { font-size: 12px; color: var(--muted); }
+  .strip .card { width: 240px; }
+  .quick { display: flex; flex-wrap: wrap; gap: 8px; }
+  .quick button { background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 999px; padding: 8px 14px; }
+  .quick button:hover { border-color: var(--red); }
+  .feats { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .feat { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .feat b { display: block; color: var(--white); margin: 6px 0 4px; font-size: 16px; }
+  .feat span { font-size: 26px; }
+  .feat p { margin: 0; color: var(--muted); font-size: 14px; }
+  .prof-banner { height: clamp(110px, 22vw, 200px); border-radius: 16px; background: linear-gradient(120deg, var(--red-deep), #1a0b0e 60%, var(--panel-2));
+    background-size: cover; background-position: center; border: 1px solid var(--line); margin-bottom: -44px; }
+  .prof-head.with-banner { padding: 0 16px; align-items: flex-end; }
+  .prof-ava { overflow: hidden; border: 3px solid var(--bg); }
+  .prof-ava img { width: 100%; height: 100%; object-fit: cover; }
+  .prof-head.with-banner .prof-ava { width: 88px; height: 88px; font-size: 36px; }
+  .socials { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .socials a, .socials span { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font-size: 13px; color: var(--text); text-decoration: none; }
+  .socials a:hover { border-color: var(--red); }
+  .reseaux-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+  .reseaux-form label { font-size: 13px; color: var(--muted); }
+  .reseaux-form input { width: 100%; margin-top: 3px; background: var(--panel); color: var(--text); border: 1px solid var(--line);
+    border-radius: 10px; padding: 9px 11px; font: inherit; }
+  .reseaux-form input:focus { outline: none; border-color: var(--red); }
+  .photo-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .photo-btns label { cursor: pointer; }
+  .ed-filter select { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; max-width: 100%; }
+  .dbl-list { font-size: 12px; color: var(--gold); }
+  button.stat { font: inherit; color: inherit; }
+  @media (max-width: 640px) { nav button[data-view="accueil"] { flex: .8; } .strip .card { width: 200px; }
+    .hero-cta { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; } .hero-cta .btn:first-child { grid-column: 1 / -1; } }
   .ed-actions { display: flex; gap: 8px; margin: 8px 0 2px; flex-wrap: wrap; }
   .ed-actions button { background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 999px; padding: 6px 12px; font-size: 13px; }
   .ed-actions button.on { border-color: var(--gold); color: var(--gold); }
@@ -345,7 +387,8 @@
     </form>
     <button class="btn ghost install" id="installBtn" type="button">📲 <span data-i18n="install"></span></button>
     <nav id="nav">
-      <button data-view="catalogue" class="on" data-i18n="catalogue"></button>
+      <button data-view="accueil" class="on" data-i18n="accueil"></button>
+      <button data-view="catalogue" data-i18n="catalogue"></button>
       <button data-view="collection" data-i18n="myCollection"></button>
       <button data-view="planning"><span data-i18n="planning"></span><i class="navbadge" id="planBadge" hidden></i></button>
       <button data-view="profil" data-i18n="profil"></button>
@@ -459,6 +502,17 @@
       readMark: "📖 Marquer comme lu", readDone: "📖 Lu ✓", readL: "lus", readOf: (a, b) => `lus ${a} / ${b}`,
       tab_collection: "Collection", tab_pile: "Pile à lire", tab_souhaits: "Souhaits",
       pileHint: "Les tomes que tu possèdes mais n'as pas encore lus.", emptyPile: "Rien à lire : tu es à jour ! 🎉",
+      accueil: "Accueil", heroGo: "Explorer le catalogue", heroScan: "📷 Scanner un tome", heroJoin: "Créer mon compte", heroMine: "Ma collection",
+      homeReleases: "Sorties à venir", homeSeeAll: "Tout voir ›", homeDiscover: "À découvrir", homeByPublic: "Par public", homeByGenre: "Par genre",
+      homeFeats: "Ce que tu peux faire", homeResume: n => `📖 ${n} tome${n > 1 ? "s" : ""} dans ta pile à lire`,
+      feats: [["📷", "Scanner", "Scanne le code-barres d'un tome, même en boutique sans réseau."], ["✅", "Pointer en un geste", "Coche toute une série en quelques touches, compte tes doubles."],
+        ["🔔", "Sorties et alertes", "Suis tes séries et sois prévenu des prochains tomes."], ["🏆", "Succès et classement", "Monte en niveau, débloque des succès, compare ta collection."]],
+      editeurL: "Éditeur :", tousEditeurs: n => `Tous les éditeurs (${n})`,
+      tab_doubles: "Doubles", doublesHint: "Les tomes que tu as en plusieurs exemplaires — pratique pour échanger ou revendre.", emptyDoubles: "Aucun double pour l'instant.",
+      dblOf: l => `Doubles : ${l}`, nDbl: n => `${n} en trop`,
+      photoAva: "📷 Changer la photo", photoBan: "🖼️ Changer la bannière", photoDone: "Image mise à jour ✓", photoErr: "Envoi impossible : ",
+      reseauxT: "Mes réseaux", reseauxHint: "Ton pseudo ou ton lien, laisse vide ce que tu n'utilises pas.",
+      aliasFound: n => `${n} œuvre${n > 1 ? "s" : ""} trouvée${n > 1 ? "s" : ""} aussi sous un autre titre (japonais, anglais…).`,
       planning: "Planning", profil: "Profil", completing: "Recherche des tomes manquants et des couvertures chez les éditeurs…",
       pointer: "☑ Pointer mes tomes", follow: "🔔 Suivre", following: "🔔 Suivie ✓", followOn: "Série suivie : tu seras prévenu des prochains tomes.",
       followOff: "Tu ne suis plus cette série.", ptHint: "Touche les numéros que tu possèdes, puis enregistre. Fais glisser la bande sur le côté.",
@@ -559,6 +613,17 @@
         "Time Manipulation": "Time travel", "Super Power": "Superpowers", Idol: "Idols" },
       readMark: "📖 Mark as read", readDone: "📖 Read ✓", readL: "read", readOf: (a, b) => `read ${a} / ${b}`,
       tab_collection: "Collection", tab_pile: "To read", tab_souhaits: "Wishlist",
+      accueil: "Home", heroGo: "Browse the catalogue", heroScan: "📷 Scan a volume", heroJoin: "Create my account", heroMine: "My collection",
+      homeReleases: "Upcoming releases", homeSeeAll: "See all ›", homeDiscover: "Discover", homeByPublic: "By audience", homeByGenre: "By genre",
+      homeFeats: "What you can do", homeResume: n => `📖 ${n} volume${n > 1 ? "s" : ""} in your reading pile`,
+      feats: [["📷", "Scan", "Scan a volume's barcode, even in a shop with no signal."], ["✅", "Tick in one go", "Tick a whole series in a few taps, count your duplicates."],
+        ["🔔", "Releases and alerts", "Follow your series and get told about upcoming volumes."], ["🏆", "Achievements", "Level up, unlock achievements, compare collections."]],
+      editeurL: "Publisher:", tousEditeurs: n => `All publishers (${n})`,
+      tab_doubles: "Duplicates", doublesHint: "Volumes you own more than once — handy to trade or sell.", emptyDoubles: "No duplicates yet.",
+      dblOf: l => `Duplicates: ${l}`, nDbl: n => `${n} extra`,
+      photoAva: "📷 Change picture", photoBan: "🖼️ Change banner", photoDone: "Image updated ✓", photoErr: "Upload failed: ",
+      reseauxT: "My socials", reseauxHint: "Your handle or link; leave empty what you don't use.",
+      aliasFound: n => `${n} title${n > 1 ? "s" : ""} also found under another name (Japanese, English…).`,
       planning: "Releases", profil: "Profile", completing: "Looking for missing volumes and covers at the publishers…",
       pointer: "☑ Tick my volumes", follow: "🔔 Follow", following: "🔔 Following ✓", followOn: "Following: you'll be told about upcoming volumes.",
       followOff: "You no longer follow this series.", ptHint: "Tap the numbers you own, then save. Swipe the strip sideways.",
@@ -640,9 +705,9 @@
   const $ = id => document.getElementById(id);
   const app = $("app"), notice = $("notice"), q = $("q");
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const state = { user: null, profile: null, series: [], coll: new Map(), view: "catalogue", serie: null, filterIds: null, limit: 60,
+  const state = { user: null, profile: null, series: [], coll: new Map(), view: "accueil", serie: null, filterIds: null, limit: 60,
                   types: new Set(store.get("isekaz.types", [])), publics: new Set(store.get("isekaz.publics", [])),
-                  genresF: new Set(store.get("isekaz.genres", [])),
+                  genresF: new Set(store.get("isekaz.genres", [])), editeurF: store.get("isekaz.editeur", null),
                   editionLangs: new Set(store.get("isekaz.editionLangs", [lang])) };
   const TORII = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 4.5c3 .8 6.5 1.1 10 1.1s7-.3 10-1.1V7c-.9.2-1.8.4-2.8.5V9H21v2h-1.8v9h-2.2v-9H7v9H4.8v-9H3V9h1.8V7.5C3.8 7.4 2.9 7.2 2 7V4.5zM7 7.8V9h4V8c-1.4 0-2.7-.1-4-.2zm6 .2v1h4V7.8c-1.3.1-2.6.2-4 .2z"/></svg>`;
 
@@ -1029,11 +1094,22 @@
     if (isOffline()) { say(t("offlineSearch")); return; }
     if (body.isbn) say(t("searchingIsbn")); else if (!notice.textContent) say(t("searching", text));
     try {
+      const alias = body.isbn ? Promise.resolve(null) : fetch(`${URL_SB}/functions/v1/genres`, { method: "POST",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ recherche: text }) }).then(x => x.json()).catch(() => null);
       const r = await fetch(`${URL_SB}/functions/v1/recherche`, { method: "POST",
         headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const res = await r.json();
-      if (res.error) { say(res.error); return; }
+      const al = await alias;
+      if (res.error && !al?.titres?.length) { say(res.error); return; }
       await loadSeries();
+      // œuvres connues sous un autre titre : « Akame ga Kill » → « Red Eyes Sword »
+      if (al?.titres?.length) {
+        const cles = new Set(al.titres.map(x => cleOeuvre({ titre: x })).filter(Boolean));
+        const ids = state.series.filter(x => cles.has(cleOeuvre(x)) || (x.titres_alt ?? []).some(a => cles.has(cleOeuvre({ titre: a })))).map(x => x.id);
+        const avant = new Set(res.series ?? []);
+        const nouveaux = ids.filter(id => !avant.has(id));
+        if (nouveaux.length) { res.series = [...avant, ...nouveaux]; say(t("aliasFound", regrouper(state.series.filter(x => nouveaux.includes(x.id))).length)); }
+      }
       if (!res.series?.length) { say(t("nothing")); return; }
       if (body.isbn) { say(res.source === "ajout" ? t("added") : ""); const se = state.series.find(x => x.id === res.series[0]);
         return se ? openOeuvre(cleOeuvre(se)) : openSerie(res.series[0]); }
@@ -1110,7 +1186,19 @@
       <label class="chip ${state.genresF.has(c) ? "on" : ""}"><input type="checkbox" data-genre="${esc(c)}" ${state.genresF.has(c) ? "checked" : ""}>
       ${esc(t("genresL")[c] ?? c)} <small>${counts[c]}</small></label>`).join("")}</div>`;
   }
+  function editeurFilter(list) {
+    const counts = {};
+    regrouper(list.filter(s => state.editionLangs.has(s.langue || "fr"))).forEach(o => new Set(o.eds.map(e => e.editeur).filter(Boolean)).forEach(e => counts[e] = (counts[e] || 0) + 1));
+    const eds = Object.keys(counts).sort((a, b) => counts[b] - counts[a] || a.localeCompare(b, lang));
+    if (eds.length < 2 && !state.editeurF) return "";
+    return `<div class="filters ed-filter"><span class="label">${t("editeurL")}</span>
+      <select id="editeurSel" aria-label="${esc(t("editeurL"))}"><option value="">${esc(t("tousEditeurs", eds.length))}</option>
+      ${eds.map(e => `<option value="${esc(e)}" ${e === state.editeurF ? "selected" : ""}>${esc(e)} (${counts[e]})</option>`).join("")}
+      ${state.editeurF && !counts[state.editeurF] ? `<option value="${esc(state.editeurF)}" selected>${esc(state.editeurF)} (0)</option>` : ""}</select></div>`;
+  }
   function bindFilters() {
+    const es = $("editeurSel");
+    if (es) es.onchange = () => { state.editeurF = es.value || null; store.set("isekaz.editeur", state.editeurF); state.limit = 60; renderCatalogue(); };
     for (const [attr, set, key] of [["data-type", state.types, "isekaz.types"], ["data-public", state.publics, "isekaz.publics"], ["data-genre", state.genresF, "isekaz.genres"]]) {
       app.querySelectorAll(`.filters input[${attr}]`).forEach(i => i.onchange = () => {
         const v = i.getAttribute(attr);
@@ -1145,14 +1233,20 @@
     const f = q.value.trim().toLowerCase();
     let list = state.series;
     if (state.filterIds) list = list.filter(s => state.filterIds.has(s.id));
-    else if (f && !/^\d{13}$/.test(f.replace(/[^0-9]/g, ""))) list = list.filter(s => `${s.titre} ${s.edition ?? ""} ${s.editeur ?? ""}`.toLowerCase().includes(f));
+    else if (f && !/^\d{13}$/.test(f.replace(/[^0-9]/g, ""))) {
+      const fn = cleOeuvre({ titre: f });
+      list = list.filter(s => `${s.titre} ${s.edition ?? ""} ${s.editeur ?? ""}`.toLowerCase().includes(f)
+        || (fn && (s.titres_alt ?? []).some(a => cleOeuvre({ titre: a }).includes(fn))));
+    }
     list = list.filter(s => (!state.types.size || state.types.has(s.type || "manga")) && (!state.publics.size || state.publics.has(s.public))
       && (!state.genresF.size || (s.genres ?? []).some(g => state.genresF.has(g))));
+    const avantEditeur = list;
+    if (state.editeurF) list = list.filter(s => s.editeur === state.editeurF);
     const visible = regrouper(list.filter(s => state.editionLangs.has(s.langue || "fr")));
     const hidden = regrouper(list).length - visible.length;
     const showHero = !f && !state.filterIds;
-    app.innerHTML = (showHero ? hero() : "") + chipFilters(t("typeL"), "type", state.types, t("types"), "data-type")
-      + chipFilters(t("publicL"), "public", state.publics, t("publics"), "data-public") + genreFilters() + langFilters() +
+    app.innerHTML = chipFilters(t("typeL"), "type", state.types, t("types"), "data-type")
+      + chipFilters(t("publicL"), "public", state.publics, t("publics"), "data-public") + genreFilters() + editeurFilter(avantEditeur) + langFilters() +
       `<h3 class="section-title">${TORII}${showHero ? t("allSeries") : t("results")}</h3>` +
       (visible.length ? `<div class="series">${visible.slice(0, state.limit).map(oeuvreCard).join("")}</div>` : "") +
       (visible.length > state.limit ? `<p style="text-align:center;margin-top:20px"><button class="btn ghost" id="moreBtn">${t("showMore", visible.length - state.limit)}</button></p>` : "") +
@@ -1197,7 +1291,7 @@
 
   async function openSerie(id) {
     const first = state.view !== "serie" || state.serie !== id;
-    state.view = "serie"; state.serie = id; state.filterIds = null;
+    state.view = "serie"; state.serie = id; state.filterIds = null; syncRoute(); setNav();
     if (first) { chargement(); window.scrollTo({ top: 0 }); }
     const s = state.series.find(x => x.id === id) ?? (await avecDelai(db.from("series").select("*, volumes(count)").eq("id", id).single())).data;
     if (!s) { state.view = "catalogue"; return render(); }
@@ -1225,7 +1319,7 @@
       ${speciales.length ? `<div class="vols">${speciales.map(v => volCell(v, v.numero)).join("")}</div>` : ""}
       <p style="margin-top:14px"><button class="btn ghost" id="addSpecialBtn">${t("addSpecial")}</button></p>`;
     $("addSpecialBtn").onclick = () => openAjout({ mode: "variante", serie: s, numero: 1, max: Math.max(max, 1) });
-    app.querySelector(".back").onclick = () => { state.view = "oeuvre"; state.oeuvre = cleOeuvre(s); render(); };
+    app.querySelector(".back").onclick = () => { if (history.length > 1 && state.depuisApp) history.back(); else openOeuvre(cleOeuvre(s)); };
     const all = $("allBtn");
     if (all) all.onclick = async () => {
       const rows = normaux.filter(v => !(state.coll.get(v.id)?.quantite > 0))
@@ -1243,17 +1337,19 @@
   async function renderMine(kind) {
     if (!state.user) { app.innerHTML = `<p class="empty">${t("loginToSee", kind)}</p>`; return; }
     const first = state.mineVue !== kind; state.mineVue = kind;
-    const ids = [...state.coll.values()].filter(r => kind === "souhaits" ? r.souhait : kind === "pile" ? r.quantite > 0 && !r.lu : r.quantite > 0).map(r => r.volume_id);
-    const onglets = `<div class="tabs-mine">${["collection", "pile", "souhaits"].map(k => `<button data-mine="${k}" class="${k === kind ? "on" : ""}">${t("tab_" + k)}${
-      k === "pile" ? ` <small>${stats().pile}</small>` : k === "souhaits" ? ` <small>${stats().souhaits}</small>` : ""}</button>`).join("")}</div>`;
+    const ids = [...state.coll.values()].filter(r => kind === "souhaits" ? r.souhait : kind === "pile" ? r.quantite > 0 && !r.lu
+      : kind === "doubles" ? r.quantite > 1 : r.quantite > 0).map(r => r.volume_id);
+    const onglets = `<div class="tabs-mine">${["collection", "pile", "souhaits", "doubles"].map(k => `<button data-mine="${k}" class="${k === kind ? "on" : ""}">${t("tab_" + k)}${
+      k === "pile" ? ` <small>${stats().pile}</small>` : k === "souhaits" ? ` <small>${stats().souhaits}</small>` : k === "doubles" ? ` <small>${stats().doubles}</small>` : ""}</button>`).join("")}</div>`;
     const st = stats();
     const head = onglets + (kind === "collection" ? `<div class="stats">
       <div class="stat"><b>${st.possedes}</b>${t("tomes")}</div><div class="stat"><b>${st.lus}</b>${t("readL")}</div>
-      <div class="stat"><b>${st.doubles}</b>${t("doublesL")}</div></div>` : kind === "pile" ? `<p class="meta" style="margin:0 0 14px">${t("pileHint")}</p>` : "");
+      <button class="stat" data-mine="doubles" style="text-align:left;cursor:pointer"><b>${st.doubles}</b>${t("doublesL")} ›</button></div>`
+      : kind === "pile" ? `<p class="meta" style="margin:0 0 14px">${t("pileHint")}</p>` : kind === "doubles" ? `<p class="meta" style="margin:0 0 14px">${t("doublesHint")}</p>` : "");
     const scans = kind === "collection" ? (await local.get("scans")) ?? [] : [];
     const pend = scans.length ? `<div class="tip pending-scans"><b style="color:var(--white)">${t("pendingScans", scans.length)}</b>
       <ul>${scans.map(x => `<li>${esc(x.isbn)} — ${x.action === "own" ? t("keepOwn") : x.action === "wish" ? t("keepWish") : t("keepLook")}</li>`).join("")}</ul></div>` : "";
-    if (!ids.length) { app.innerHTML = pend + head + `<p class="empty">${kind === "souhaits" ? t("emptyWish") : kind === "pile" ? t("emptyPile") : t("emptyColl")}</p>`; bindOnglets(); return; }
+    if (!ids.length) { app.innerHTML = pend + head + `<p class="empty">${kind === "souhaits" ? t("emptyWish") : kind === "pile" ? t("emptyPile") : kind === "doubles" ? t("emptyDoubles") : t("emptyColl")}</p>`; bindOnglets(); return; }
 
     // 1. tout de suite : ce qu'on a déjà en mémoire
     const want = new Set(ids);
@@ -1314,8 +1410,10 @@
             <span class="mine-info"><b>${esc(g.se.titre ?? "")}</b>
               <span class="meta">${esc([g.se.edition, g.se.editeur, (g.se.langue || "fr").toUpperCase()].filter(Boolean).join(" · "))}</span>
               ${kind === "collection" ? `<span class="mine-prog"><i style="width:${pct}%"></i></span>
-                <span class="meta" style="font-size:12px">${t("readOf", g.vs.filter(v => state.coll.get(v.id)?.lu).length, g.vs.length)}</span>` : ""}</span>
-            <span class="mine-count">${kind === "collection" ? `${g.vs.length}<small> / ${g.total}</small>` : g.vs.length}</span>
+                <span class="meta" style="font-size:12px">${t("readOf", g.vs.filter(v => state.coll.get(v.id)?.lu).length, g.vs.length)}</span>`
+                : kind === "doubles" ? `<span class="dbl-list">${esc(t("dblOf", g.vs.map(v => `${t("tome")} ${v.numero} ×${state.coll.get(v.id)?.quantite ?? 2}`).join(", ")))}</span>` : ""}</span>
+            <span class="mine-count">${kind === "collection" ? `${g.vs.length}<small> / ${g.total}</small>`
+              : kind === "doubles" ? `${g.vs.reduce((a, v) => a + (state.coll.get(v.id)?.quantite ?? 2) - 1, 0)}<small> ${t("nDbl", "").trim()}</small>` : g.vs.length}</span>
             <span class="mine-chev">${ouvert ? "▴" : "▾"}</span></button>
           ${ouvert ? `<div class="row" data-row="m-${g.sid}">${g.vs.map(v => tile(v, g.se)).join("")}</div>
             <button class="link mine-go" data-goto="${g.sid}">${t("seeSerie")} ›</button>` : ""}</div>`;
@@ -1378,7 +1476,7 @@
 
   async function openOeuvre(key) {
     const first = state.view !== "oeuvre" || state.oeuvre !== key;
-    state.view = "oeuvre"; state.oeuvre = key; state.filterIds = null;
+    state.view = "oeuvre"; state.oeuvre = key; state.filterIds = null; syncRoute(); setNav();
     const toutes = state.series.filter(x => cleOeuvre(x) === key);
     if (!toutes.length) { state.view = "catalogue"; return render(); }
     const ordre = e => (state.editionLangs.has(e.langue || "fr") ? 0 : 1) * 1e6 - (e.volumes[0]?.count ?? 0);
@@ -1400,14 +1498,19 @@
   state.genresDemandes ??= new Set();
   async function enrichirGenres(toutes, vols) {
     const key = cleOeuvre(toutes[0]);
-    if (isOffline() || toutes.some(e => e.genres_maj) || state.genresDemandes.has(key)) return;
+    if (isOffline() || toutes.every(e => e.genres_maj && e.titres_maj) || state.genresDemandes.has(key)) return;
     state.genresDemandes.add(key);
     try {
       const r = await fetch(`${URL_SB}/functions/v1/genres`, { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ titre: toutes[0].titre }) });
       const res = await r.json();
+      if (res.fusion) { // des éditions en double ont été regroupées côté serveur : on recharge
+        await loadSeries(); state.series.filter(x => cleOeuvre(x) === key).forEach(x => mem.delete(x.id));
+        if (state.view === "oeuvre" && state.oeuvre === key) openOeuvre(key);
+        return;
+      }
       if (!res.genres) return;
-      for (const e of toutes) { e.genres = res.genres; e.genres_maj = new Date().toISOString(); if (!e.public && res.public) e.public = res.public; }
+      for (const e of toutes) { e.titres_alt = res.titres ?? e.titres_alt; e.titres_maj = new Date().toISOString(); e.genres = res.genres; e.genres_maj = new Date().toISOString(); if (!e.public && res.public) e.public = res.public; }
       local.set("series", state.series);
       if (state.view === "oeuvre" && state.oeuvre === key) dessinerOeuvre(toutes, vols, false);
     } catch { /* pas grave : on réessaiera à la prochaine visite */ }
@@ -1496,7 +1599,7 @@
       ${coffrets.length ? `<div class="block"><h3>${t("boxes")}</h3><div class="row" data-row="coffrets">${coffrets.map(([v, s]) => tile(v, s, true)).join("")}</div></div>` : ""}
       <p style="margin-top:22px"><button class="btn ghost" id="addSpecialBtn">${t("addSpecial")}</button></p>`;
 
-    app.querySelector(".back").onclick = () => { state.view = "catalogue"; render(); };
+    app.querySelector(".back").onclick = () => { if (state.depuisApp) history.back(); else { state.view = "catalogue"; render(); } };
     app.querySelectorAll(".ed-head[data-serie]").forEach(b => b.onclick = () => openSerie(+b.dataset.serie));
     bindBoutonsEdition(vols, toutes);
     bindTiles(vols);
@@ -1511,6 +1614,72 @@
     if (first) window.scrollTo({ top: 0 });
   }
 
+
+
+  // ---------- Accueil ----------
+  async function renderAccueil() {
+    const oeuvres = regrouper(state.series.filter(x => state.editionLangs.has(x.langue || "fr") && (x.type || "manga") === "manga"));
+    const vols = state.series.reduce((a, x) => a + (x.volumes?.[0]?.count ?? 0), 0);
+    // « À découvrir » : 10 œuvres d'au moins 3 tomes, tirées au sort chaque jour
+    const jour = Math.floor(Date.now() / 864e5);
+    const hasard = i => { const x = Math.sin(jour * 99 + i) * 1e4; return x - Math.floor(x); };
+    const choix = oeuvres.filter(o => o.eds.reduce((a, e) => a + (e.volumes?.[0]?.count ?? 0), 0) >= 3)
+      .map((o, i) => [hasard(i), o]).sort((a, b) => a[0] - b[0]).slice(0, 10).map(x => x[1]);
+    const genres = {};
+    oeuvres.forEach(o => new Set(o.eds.flatMap(e => e.genres ?? [])).forEach(g => genres[g] = (genres[g] || 0) + 1));
+    const topGenres = Object.keys(genres).sort((a, b) => genres[b] - genres[a]).slice(0, 12);
+    const st = state.user ? stats() : null;
+    app.innerHTML = `<section class="hero">
+        <div class="hero-art"><img src="assets/isekaz-512.jpg" alt="Isekaz" width="512" height="512"></div>
+        <div><div class="kanji">異世界 · コレクション</div>
+          <h2>Isekaz <span>Collection</span></h2>
+          <p><b style="color:var(--white)">${t("heroTag")}.</b> ${t("heroText")}</p>
+          <div class="hero-stats">${st ? `<div><b>${new Set([...state.coll.values()].filter(r => r.quantite > 0).map(r => r.serie_id).filter(Boolean)).size}</b>${t("statMySeries")}</div>
+            <div><b>${st.possedes}</b>${t("statMyVols")}</div><div><b>${t("lvl")} ${st.niveau}</b>${t("statLevel")}</div>`
+            : `<div><b>${oeuvres.length.toLocaleString(lang)}</b>${t("statSeries")}</div><div><b>${vols.toLocaleString(lang)}</b>${t("statVols")}</div>`}</div>
+          <div class="hero-cta"><button class="btn" data-go="catalogue">${t("heroGo")}</button>
+            <button class="btn ghost" id="homeScan">${t("heroScan")}</button>
+            ${state.user ? `<button class="btn ghost" data-go="collection">${t("heroMine")}</button>` : `<button class="btn ghost" id="homeJoin">${t("heroJoin")}</button>`}</div>
+          ${st?.pile ? `<p style="margin:12px 0 0"><button class="link" data-go="pile">${t("homeResume", st.pile)}</button></p>` : ""}
+        </div></section>
+      <div class="home-sec" id="homeRel"></div>
+      ${choix.length ? `<div class="home-sec"><h3 class="section-title">${TORII}${t("homeDiscover")}</h3>
+        <div class="strip">${choix.map(oeuvreCard).join("")}</div></div>` : ""}
+      <div class="home-sec"><h3 class="section-title">${TORII}${t("homeByPublic")}</h3>
+        <div class="quick">${Object.entries(t("publics")).map(([k, v]) => `<button data-pub="${k}">${esc(v)}</button>`).join("")}</div></div>
+      ${topGenres.length ? `<div class="home-sec"><h3 class="section-title">${TORII}${t("homeByGenre")}</h3>
+        <div class="quick">${topGenres.map(g => `<button data-gen="${esc(g)}">${esc(t("genresL")[g] ?? g)}</button>`).join("")}</div></div>` : ""}
+      <div class="home-sec"><h3 class="section-title">${TORII}${t("homeFeats")}</h3>
+        <div class="feats">${t("feats").map(([i, b, p]) => `<div class="feat"><span>${i}</span><b>${esc(b)}</b><p>${esc(p)}</p></div>`).join("")}</div></div>`;
+    app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => { state.view = b.dataset.go; render(); });
+    $("homeScan").onclick = () => openScanner();
+    const j = $("homeJoin"); if (j) j.onclick = () => openAuth("signup");
+    app.querySelectorAll("[data-pub]").forEach(b => b.onclick = () => {
+      state.publics = new Set([b.dataset.pub]); store.set("isekaz.publics", [...state.publics]); state.genresF.clear(); store.set("isekaz.genres", []);
+      state.limit = 60; state.view = "catalogue"; render(); });
+    app.querySelectorAll("[data-gen]").forEach(b => b.onclick = () => {
+      state.genresF = new Set([b.dataset.gen]); store.set("isekaz.genres", [...state.genresF]); state.publics.clear(); store.set("isekaz.publics", []);
+      state.limit = 60; state.view = "catalogue"; render(); });
+    bindCards(); setNav();
+    // sorties à venir (mes séries d'abord)
+    const tous = await chargerPlanning().catch(() => []);
+    if (state.view !== "accueil") return;
+    const auj = isoJour(new Date()), suivies = mesSeries();
+    let rel = tous.filter(v => v.date_parution >= auj && state.editionLangs.has(v.series?.langue || "fr"))
+      .sort((a, b) => (estMaSerie(b, suivies) - estMaSerie(a, suivies)) || a.date_parution.localeCompare(b.date_parution)).slice(0, 16);
+    rel.sort((a, b) => a.date_parution.localeCompare(b.date_parution));
+    if (!rel.length) return;
+    const zone = $("homeRel");
+    zone.innerHTML = `<h3 class="section-title">${TORII}${t("homeReleases")} <button class="link" data-go="planning">${t("homeSeeAll")}</button></h3>
+      <div class="strip">${rel.map(v => {
+        const img = v.photo_url || v.couverture_url || (v.isbn13 ? `https://covers.openlibrary.org/b/isbn/${v.isbn13}-M.jpg?default=false` : "");
+        return `<div class="rel" data-rv="${v.id}" role="button" tabindex="0"><div class="pc">${v.numero}${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : ""}
+          <span class="cd">${t("jMoins", joursAvant(v.date_parution))}</span></div>
+          <b>${esc(v.series?.titre ?? "")}</b><span>${t("tome")} ${v.numero} · ${esc(fmtDate(v.date_parution))}</span></div>`; }).join("")}</div>`;
+    const parId = new Map(rel.map(v => [v.id, v]));
+    zone.querySelectorAll("[data-rv]").forEach(el => el.onclick = () => ouvrirTome(parId.get(+el.dataset.rv)));
+    zone.querySelector("[data-go]").onclick = () => { state.view = "planning"; render(); };
+  }
 
   // ---------- Planning des sorties + alertes ----------
   const isoJour = d => d.toISOString().slice(0, 10);
@@ -1658,19 +1827,55 @@
           <td class="n">${r.tomes}</td><td class="n">${r.series}</td><td class="n">${r.lus}</td></tr>`).join("")}</table>` : `<p class="empty">${t("rankEmpty")}</p>`}`;
   }
   const bindPseudos = () => app.querySelectorAll("[data-pseudo]").forEach(b => b.onclick = () => ouvrirProfil(b.dataset.pseudo));
-  function ouvrirProfil(pseudo) { state.view = "u"; state.pseudoVu = pseudo; history.replaceState(null, "", "#u=" + encodeURIComponent(pseudo)); render(); }
+  function ouvrirProfil(pseudo) { state.view = "u"; state.pseudoVu = pseudo; render(); }
+
+
+  const RESEAUX = [["instagram", "Instagram", h => `https://instagram.com/${h}`], ["x", "X / Twitter", h => `https://x.com/${h}`],
+    ["tiktok", "TikTok", h => `https://tiktok.com/@${h}`], ["youtube", "YouTube", h => `https://youtube.com/@${h}`],
+    ["twitch", "Twitch", h => `https://twitch.tv/${h}`], ["discord", "Discord", null], ["mal", "MyAnimeList", h => `https://myanimelist.net/profile/${h}`],
+    ["anilist", "AniList", h => `https://anilist.co/user/${h}`]];
+  // on ne garde que le pseudo (même si on colle un lien) et on fabrique nous-mêmes l'adresse : pas de lien piégé possible
+  const pseudoReseau = x => String(x ?? "").trim().replace(/^https?:\/\/[^/]+\//i, "").replace(/^@/, "").replace(/^(user|profile)\//i, "").split(/[/?#]/)[0].slice(0, 60);
+  function reseauxHtml(r) {
+    const l = RESEAUX.filter(([k]) => r?.[k]).map(([k, nom, url]) => {
+      const h = pseudoReseau(r[k]);
+      return url && /^[\w.\-]+$/.test(h) ? `<a href="${esc(url(encodeURIComponent(h)))}" target="_blank" rel="noopener nofollow">${nom} · ${esc(h)}</a>` : `<span>${nom} · ${esc(String(r[k]).slice(0, 60))}</span>`;
+    });
+    return l.length ? `<div class="socials">${l.join("")}</div>` : "";
+  }
+  function teteProfil(p, sousTitre) {
+    return `<div class="prof-banner" ${p.banniere_url ? `style="background-image:url('${esc(p.banniere_url)}')"` : ""}></div>
+      <div class="prof-head with-banner"><div class="prof-ava">${p.avatar_url ? `<img src="${esc(p.avatar_url)}" alt="">` : esc((p.pseudo ?? "?")[0].toUpperCase())}</div>
+        <div><h2 style="margin:0">${esc(p.pseudo ?? "")}</h2>${sousTitre}</div></div>
+      ${p.bio ? `<p style="margin:12px 0 0">${esc(p.bio)}</p>` : ""}${reseauxHtml(p.reseaux)}`;
+  }
+  async function envoyerImageProfil(fichier, champ) {
+    try {
+      const blob = await compresser(fichier);
+      const chemin = `${state.user.id}/profil/${champ}-${Date.now()}.jpg`;
+      const { error } = await db.storage.from("photos").upload(chemin, blob, { contentType: "image/jpeg" });
+      if (error) throw error;
+      const url = db.storage.from("photos").getPublicUrl(chemin).data.publicUrl;
+      const { error: e2 } = await db.from("profiles").update({ [champ]: url }).eq("id", state.user.id);
+      if (e2) throw e2;
+      state.profile = { ...state.profile, [champ]: url }; local.set(`profile:${state.user.id}`, state.profile);
+      say(t("photoDone")); renderProfil();
+    } catch (e) { say(t("photoErr") + (e.message ?? e)); }
+  }
 
   async function renderProfil() {
     if (!state.user) { app.innerHTML = `<p class="empty">${t("loginProfil")}</p>` + await classementHtml(null); bindPseudos(); setNav(); return; }
-    if (!isOffline() && !state.profile?.hasOwnProperty("public")) {
-      const { data } = await avecDelai(db.from("profiles").select("pseudo, public, bio").eq("id", state.user.id).maybeSingle());
+    if (!isOffline() && !state.profile?.hasOwnProperty("reseaux")) {
+      const { data } = await avecDelai(db.from("profiles").select("pseudo, public, bio, avatar_url, banniere_url, reseaux").eq("id", state.user.id).maybeSingle());
       if (data) { state.profile = data; local.set(`profile:${state.user.id}`, data); }
     }
     if (state.view !== "profil") return;
     const p = state.profile ?? {}, st = stats(), b = bilan([...state.coll.values()]);
-    app.innerHTML = `<div class="prof-head"><div class="prof-ava">${esc((p.pseudo ?? "?")[0].toUpperCase())}</div>
-        <div><h2 style="margin:0">${esc(p.pseudo ?? "")}</h2><div class="meta">${t("profLevel", st.niveau, st.prochain)}</div>
-          <div class="lvlbar"><i style="width:${(10 - st.prochain) * 10}%"></i></div></div></div>
+    app.innerHTML = teteProfil(p, `<div class="meta">${t("profLevel", st.niveau, st.prochain)}</div>
+          <div class="lvlbar"><i style="width:${(10 - st.prochain) * 10}%"></i></div>`) + `
+      <div class="photo-btns" style="margin-top:12px">
+        <label class="btn ghost">${t("photoAva")}<input type="file" accept="image/*" id="avaIn" hidden></label>
+        <label class="btn ghost">${t("photoBan")}<input type="file" accept="image/*" id="banIn" hidden></label></div>
       <div style="margin-top:16px">${statsHtml(b)}</div>
       <h3 class="section-title" style="margin-top:24px">✦ ${t("badgesT")} <small class="meta" style="font-family:Inter;font-size:14px">${BADGES.filter(([, , ok]) => ok(b)).length} / ${BADGES.length}</small></h3>
       ${badgesHtml(b)}
@@ -1678,16 +1883,22 @@
       <form class="form-prof" id="profForm">
         <label class="switch"><input type="checkbox" id="pPublic" ${p.public ? "checked" : ""}> ${t("profPublic")}</label>
         <label>${t("profBio")}<br><textarea id="pBio" maxlength="280" style="width:100%">${esc(p.bio ?? "")}</textarea></label>
+        <div><b>${t("reseauxT")}</b><p class="meta" style="margin:2px 0 8px;font-size:13px">${t("reseauxHint")}</p>
+          <div class="reseaux-form">${RESEAUX.map(([k, nom]) => `<label>${nom}<input type="text" data-res="${k}" maxlength="80" value="${esc(p.reseaux?.[k] ?? "")}" autocomplete="off"></label>`).join("")}</div></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="submit">${t("profSave")}</button>
           ${p.public ? `<button class="btn ghost" type="button" id="shareBtn">${t("profShare")}</button>` : ""}</div></form>
       <div id="rankBox"></div>`;
     $("profForm").onsubmit = async e => {
       e.preventDefault();
-      const maj = { public: $("pPublic").checked, bio: $("pBio").value.trim() || null };
+      const reseaux = {};
+      app.querySelectorAll("[data-res]").forEach(i => { const v = i.dataset.res === "discord" ? i.value.trim().slice(0, 60) : pseudoReseau(i.value); if (v) reseaux[i.dataset.res] = v; });
+      const maj = { public: $("pPublic").checked, bio: $("pBio").value.trim() || null, reseaux };
       const { error } = await db.from("profiles").update(maj).eq("id", state.user.id);
       if (error) return say(t("error") + error.message);
       state.profile = { ...p, ...maj }; local.set(`profile:${state.user.id}`, state.profile); say(t("profSaved")); renderProfil();
     };
+    $("avaIn").onchange = e => { const f = e.target.files?.[0]; if (f) envoyerImageProfil(f, "avatar_url"); };
+    $("banIn").onchange = e => { const f = e.target.files?.[0]; if (f) envoyerImageProfil(f, "banniere_url"); };
     const sh = $("shareBtn");
     if (sh) sh.onclick = async () => {
       const url = `${location.origin}${location.pathname}#u=${encodeURIComponent(p.pseudo)}`;
@@ -1700,9 +1911,9 @@
   async function renderPublic(pseudo) {
     chargement();
     const back = `<button class="back">${t("back")}</button>`;
-    const { data: p } = await avecDelai(db.from("profiles").select("id, pseudo, public, bio").eq("pseudo", pseudo).maybeSingle());
+    const { data: p } = await avecDelai(db.from("profiles").select("id, pseudo, public, bio, avatar_url, banniere_url, reseaux").eq("pseudo", pseudo).maybeSingle());
     if (state.view !== "u") return;
-    const fin = html => { app.innerHTML = back + html; app.querySelector(".back").onclick = () => { history.replaceState(null, "", location.pathname); state.view = "profil"; render(); }; setNav(); };
+    const fin = html => { app.innerHTML = back + html; app.querySelector(".back").onclick = () => { if (state.depuisApp) history.back(); else { state.view = "profil"; render(); } }; setNav(); };
     if (!p) return fin(`<p class="empty">${t("pubNone")}</p>`);
     if (!p.public && p.id !== state.user?.id) return fin(`<p class="empty">${t("pubPrivate")}</p>`);
     const { data: rows } = await avecDelai(db.from("collection").select("quantite, souhait, lu, volumes(serie_id)").eq("user_id", p.id).limit(10000));
@@ -1712,9 +1923,7 @@
     rs.filter(r => r.quantite > 0).forEach(r => parSerie[r.serie_id] = (parSerie[r.serie_id] || 0) + 1);
     const ses = Object.entries(parSerie).map(([id, n]) => ({ se: state.series.find(x => x.id === +id), n })).filter(x => x.se)
       .sort((a, c) => a.se.titre.localeCompare(c.se.titre, lang));
-    fin(`<div class="prof-head"><div class="prof-ava">${esc(p.pseudo[0].toUpperCase())}</div>
-        <div><h2 style="margin:0">${esc(p.pseudo)}</h2><div class="meta">${t("lvl")} ${1 + Math.floor(b.tomes / 10)}</div>
-        ${p.bio ? `<p style="margin:6px 0 0">${esc(p.bio)}</p>` : ""}</div></div>
+    fin(teteProfil(p, `<div class="meta">${t("lvl")} ${1 + Math.floor(b.tomes / 10)}</div>`) + `
       <div style="margin-top:16px">${statsHtml(b)}</div>
       <h3 class="section-title" style="margin-top:24px">✦ ${t("badgesT")}</h3>${badgesHtml(b)}
       <h3 class="section-title" style="margin-top:24px">${TORII}${t("pubSeries")}</h3>
@@ -1779,14 +1988,50 @@
     $("lensGo").onclick = () => { const x = $("lensTxt").value.trim().split(/\s+/).slice(0, 6).join(" "); $("fiche").close(); q.value = x; state.view = "catalogue"; render(); searchOnline(x); };
   }
 
-  const rubrique = v => ["pile", "souhaits"].includes(v) ? "collection" : v === "u" ? "profil" : v;
+  const rubrique = v => ["pile", "souhaits", "doubles"].includes(v) ? "collection" : v === "u" ? "profil" : ["oeuvre", "serie"].includes(v) ? "catalogue" : v;
+  // Chaque page a son adresse (#catalogue, #o=one piece…) : le bouton retour du téléphone revient à la page d'avant
+  const VUES = ["accueil", "catalogue", "collection", "pile", "souhaits", "doubles", "planning", "profil"];
+  let routeEnCours = false;
+  function routeDe() {
+    if (state.view === "oeuvre") return "#o=" + encodeURIComponent(state.oeuvre);
+    if (state.view === "serie") return "#s=" + state.serie;
+    if (state.view === "u") return "#u=" + encodeURIComponent(state.pseudoVu ?? "");
+    return state.view === "accueil" ? "#" : "#" + state.view;
+  }
+  function syncRoute() {
+    if (routeEnCours) return;
+    const h = routeDe();
+    if ((location.hash || "#") !== h) history.pushState(null, "", h === "#" ? location.pathname + location.search : h);
+  }
+  function lireRoute(h) {
+    const m = (h || "").match(/^#(o|s|u)=(.+)$/);
+    if (m) return { view: { o: "oeuvre", s: "serie", u: "u" }[m[1]], arg: decodeURIComponent(m[2]) };
+    const v = (h || "").slice(1);
+    return { view: VUES.includes(v) ? v : "accueil" };
+  }
+  function appliquerRoute(h) {
+    const r = lireRoute(h);
+    routeEnCours = true;
+    try {
+      say("");
+      if (r.view === "oeuvre") { if (!state.series.some(x => cleOeuvre(x) === r.arg)) { state.view = "catalogue"; render(); } else openOeuvre(r.arg); }
+      else if (r.view === "serie") openSerie(+r.arg);
+      else { if (r.view === "u") state.pseudoVu = r.arg; state.view = r.view; state.filterIds = null; render(); }
+    } finally { routeEnCours = false; }
+  }
+  addEventListener("popstate", () => {
+    const d = document.querySelector("dialog[open]");
+    if (d) { d.close(); history.pushState(null, "", routeDe() === "#" ? location.pathname : routeDe()); return; } // retour = fermer la fenêtre ouverte
+    appliquerRoute(location.hash);
+  });
   function setNav() { document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.view === rubrique(state.view))); }
 
   function render() {
-    setNav();
+    setNav(); syncRoute();
     if (state.view === "serie") return openSerie(state.serie);
     if (state.view === "oeuvre") return openOeuvre(state.oeuvre);
-    if (["collection", "pile", "souhaits"].includes(state.view)) return renderMine(state.view);
+    if (["collection", "pile", "souhaits", "doubles"].includes(state.view)) return renderMine(state.view);
+    if (state.view === "accueil") return renderAccueil();
     if (state.view === "planning") return renderPlanning();
     if (state.view === "profil") return renderProfil();
     if (state.view === "u") return renderPublic(state.pseudoVu);
@@ -1795,7 +2040,8 @@
 
   // ---------- Événements ----------
   document.querySelectorAll("#nav button").forEach(b => b.onclick = () => { state.view = b.dataset.view; state.filterIds = null; say(""); render(); });
-  $("home").onclick = () => { state.view = "catalogue"; state.filterIds = null; q.value = ""; say(""); render(); };
+  $("home").onclick = () => { state.view = "accueil"; state.filterIds = null; q.value = ""; say(""); render(); };
+  addEventListener("click", () => { state.depuisApp = true; }, { capture: true, once: true });
   $("siteLang").onchange = e => { lang = e.target.value; store.set("isekaz.lang", lang); applyI18n(); renderAccount(); render(); updateOffline(); };
   q.addEventListener("input", () => { state.filterIds = null; state.limit = 60; if (state.view !== "catalogue") state.view = "catalogue"; say(""); renderCatalogue(); setNav(); });
   $("searchForm").addEventListener("submit", e => {
@@ -2180,9 +2426,7 @@
   applyI18n();
   await loadSeries();
   await loadUser();
-  const lien = location.hash.match(/^#u=(.+)$/);
-  if (lien) { state.view = "u"; state.pseudoVu = decodeURIComponent(lien[1]); }
-  render();
+  appliquerRoute(location.hash);
   verifierAlertes();
   flushQueue().then(resolveScans).then(syncCatalogue).then(prefetchForOffline);
   // sans détecteur intégré, on garde ZXing en réserve pour pouvoir scanner hors ligne
