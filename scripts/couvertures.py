@@ -16,6 +16,7 @@ import requests
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--series", type=int, default=300, help="nombre maximum de séries à traiter")
+    p.add_argument("--ids", default="", help="séries précises à traiter d'abord (ex. 1,67)")
     a = p.parse_args()
     url, key = os.environ.get("SUPABASE_URL"), os.environ.get("SUPABASE_SERVICE_KEY")
     if not url or not key:
@@ -24,6 +25,8 @@ def main():
     r = requests.post(f"{url}/rest/v1/rpc/series_a_illustrer", headers=h, json={"limite": a.series}, timeout=120)
     r.raise_for_status()
     liste = r.json()
+    prio = [{"id": int(x)} for x in a.ids.replace(" ", "").split(",") if x.isdigit()]
+    liste = prio + [s for s in liste if s["id"] not in {p["id"] for p in prio}]
     print(f"🖼️  {len(liste)} séries avec des tomes sans couverture à traiter")
     total, appels = 0, 0
     for i, s in enumerate(liste, 1):

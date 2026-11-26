@@ -75,6 +75,7 @@ function sansDoublons(tomes: Tome[]): Tome[] {
 }
 
 function editeurPropre(p: string): string {
+  if (/^\s*comics[\s-]*usa\s*$/i.test(p)) return "Glénat"; // label de Glénat (premiers Dragon Ball) — comme editeur_canonique() en base
   return clean(p.replace(/(^|\s)(mangas?|[ée]ditions?|sas|sarl)(?=\s|,|$)/giu, " ").replace(/[,.]+$/, "")) || p;
 }
 
@@ -345,11 +346,11 @@ Deno.serve(async (req) => {
   const completer = Number(body.completer ?? 0);
   if (completer) {
     quota = false;
-    const { data: se } = await db.from("series").select("id, titre, editeur, langue").eq("id", completer).maybeSingle();
+    const { data: se } = await db.from("series").select("id, titre, edition, editeur, langue").eq("id", completer).maybeSingle();
     if (!se) return json({ error: "série inconnue" }, 404);
     const { count: total } = await db.from("volumes").select("id", { count: "exact", head: true }).eq("serie_id", se.id);
     const cible = `intitle:"${se.titre.replace(/"/g, "")}"${se.editeur && se.editeur !== INCONNU ? ` inpublisher:"${se.editeur.replace(/"/g, "")}"` : ""}`;
-    const pages = [0, ...((total ?? 0) > 35 ? [40] : []), ...((total ?? 0) > 75 ? [80] : [])];
+    const pages = [0, ...((total ?? 0) > 15 || se.edition ? [40] : []), ...((total ?? 0) > 60 ? [80] : [])];
     let tomes = (await Promise.all(pages.map((st) => google(cible, st)))).flat();
     if (!tomes.length && se.editeur) tomes = await google(`intitle:"${se.titre.replace(/"/g, "")}"`, 0); // éditeur mal écrit chez Google
     tomes = sansDoublons(tomes);
@@ -361,14 +362,15 @@ Deno.serve(async (req) => {
       const { data } = await db.rpc("completer_volumes", { lignes: infos.slice(i, i + 200) });
       completes += data ?? 0;
     }
-    const memes = resoudreEditeurs(tomes).filter((t) => normT(t.titre) === normT(se.titre) && !t.edition
+    const memeEd = (t: Tome) => normT(t.edition ?? "") === normT(se.edition ?? "");
+    const memes = resoudreEditeurs(tomes).filter((t) => normT(t.titre) === normT(se.titre) && memeEd(t)
       && t.editeur.toLowerCase() === (se.editeur ?? "").toLowerCase() && t.langue === se.langue);
     if (memes.length) await enregistrer(memes);
     // Même tome, autre ISBN (réimpression, « Édition originale »…) : on reprend sa couverture, par numéro de tome.
     const parNumero = (liste: Tome[]) => {
       const m = new Map<number, Tome>();
       for (const t of liste) if (t.couverture && !t.variante && normT(t.titre) === normT(se.titre) && t.langue === se.langue)
-        if (!m.has(t.numero) || !t.edition) m.set(t.numero, t);
+        if (!m.has(t.numero) || memeEd(t)) m.set(t.numero, t);
       return m;
     };
     const { data: sans } = await db.from("volumes").select("id, numero").eq("serie_id", se.id).is("couverture_url", null).is("variante", null);

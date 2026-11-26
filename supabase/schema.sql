@@ -169,3 +169,6 @@ create index if not exists series_titres_alt_idx on public.series using gin (tit
 -- ===== Couvertures (migration « series_a_illustrer ») : file des séries à compléter par Google Books, chaque jour =====
 alter table public.series add column if not exists couv_maj timestamptz;
 -- + fonction public.series_a_illustrer(limite) réservée à la clé serveur (voir la migration dans Supabase)
+
+-- ===== Noms d'éditeurs unifiés (migration « editeurs_alias ») : « Comics USA » → Glénat, « Glénat Manga » → Glénat… =====
+-- fonction public.editeur_canonique(text) + déclencheur series_editeur_canonique (avant insertion / changement d'éditeur)

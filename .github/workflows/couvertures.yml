@@ -7,6 +7,10 @@ on:
         description: "Nombre maximum de séries à traiter"
         required: true
         default: "400"
+      ids:
+        description: "Séries précises à traiter d'abord (numéros séparés par des virgules, facultatif)"
+        required: false
+        default: ""
   schedule:
     - cron: "17 9 * * *"   # tous les jours vers 10 h (heure de Paris), juste après la remise à zéro du quota Google (minuit en Californie)
 
@@ -24,4 +28,5 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: python scripts/couvertures.py --series "${{ inputs.series || '400' }}"
+          IDS: ${{ inputs.ids }}
+        run: python scripts/couvertures.py --series "${{ inputs.series || '400' }}" --ids "$IDS"

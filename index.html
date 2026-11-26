@@ -1260,10 +1260,31 @@
     if (more) more.onclick = () => { state.limit += 60; renderCatalogue(); };
   }
 
+
+  // Couverture d'un tome : la sienne, sinon celle d'un autre tirage du même numéro (même série), sinon Open Library.
+  // Les images suivantes sont essayées une par une si la précédente n'existe pas.
+  function couvertures(v, taille = "M") {
+    const ol = isbn => `https://covers.openlibrary.org/b/isbn/${isbn}-${taille}.jpg?default=false`;
+    const l = [v.photo_url, v.couverture_url];
+    const freres = !v.variante ? (state.voisins?.get(`${v.serie_id}|${v.numero}`) ?? []).filter(x => x.id !== v.id) : [];
+    freres.forEach(x => l.push(x.photo_url, x.couverture_url));
+    if (v.isbn13) l.push(ol(v.isbn13));
+    freres.forEach(x => x.isbn13 && l.push(ol(x.isbn13)));
+    return [...new Set(l.filter(Boolean))];
+  }
+  function imgCouv(v, taille, attrs = "") {
+    const [p, ...suite] = couvertures(v, taille);
+    return p ? `<img src="${esc(p)}" alt="" loading="lazy" ${attrs} data-alt="${esc(suite.join(" "))}" onerror="couvSuivante(this)">` : "";
+  }
+  window.couvSuivante = img => { const l = (img.dataset.alt || "").split(" ").filter(Boolean); if (!l.length) return img.remove(); img.src = l.shift(); img.dataset.alt = l.join(" "); };
+  function retenirVoisins(vols) {
+    state.voisins ??= new Map();
+    for (const v of vols ?? []) { const k = `${v.serie_id}|${v.numero}`; const a = state.voisins.get(k) ?? []; if (!a.some(x => x.id === v.id)) a.push(v); state.voisins.set(k, a); }
+  }
+
   function volCell(v, num, nSpe = 0) {
     if (!v) return `<div class="vol missing"><div class="cover">${num}</div><div class="info">${t("tome")} ${num}<br><span class="isbn">${t("missingIsbn")}</span></div></div>`;
     const e = state.coll.get(v.id) ?? { quantite: 0, souhait: false };
-    const img = v.photo_url || v.couverture_url || (v.isbn13 ? `https://covers.openlibrary.org/b/isbn/${v.isbn13}-M.jpg?default=false` : "");
     const badge = e.quantite > 1 ? `<span class="badge dbl">${t("doubles", e.quantite - 1)}</span>`
       : e.quantite === 1 ? `<span class="badge">✓</span>` : "";
     const own = e.quantite > 0
@@ -1271,7 +1292,7 @@
       : `<button data-a="own">${t("own")}</button>`;
     const wish = e.quantite > 0 ? "" : `<button data-a="wish" class="${e.souhait ? "on-wish" : ""}" title="${esc(t("wishT"))}" aria-label="${esc(t("wishT"))}" aria-pressed="${e.souhait}">${e.souhait ? "♥" : "♡"}</button>`;
     return `<div class="vol ${e.quantite > 0 ? "owned" : e.souhait ? "wished" : ""}" data-vid="${v.id}">
-      <div class="cover">${v.numero}<img src="${esc(img)}" alt="" loading="lazy" style="position:absolute;inset:0" onerror="this.remove()">${badge}</div>
+      <div class="cover">${v.numero}${imgCouv(v, "M", 'style="position:absolute;inset:0"')}${badge}</div>
       <div class="info">${v.variante ? `<span class="soon" style="margin:0 0 4px">${esc(t("variantes")[v.variante] ?? v.variante)}</span><br>` : ""}${v.titre && v.serie_type && v.serie_type !== "manga" ? esc(v.titre) : `${t("tome")} ${v.numero}`}
         ${v.variante_nom ? `<br><span class="meta" style="font-size:12px">${esc(v.variante_nom)}</span>` : ""}${v.contenu ? `<br><span class="meta" style="font-size:12px">${esc(v.contenu)}</span>` : ""}
         <br><span class="isbn">${esc(v.isbn13 ?? "")}</span>${nSpe ? `<br><button class="link" data-a="specials" style="font-size:12px">${t("nSpecials", nSpe)}</button>` : ""}</div>
@@ -1301,6 +1322,7 @@
     const { data: vols, error } = await avecDelai(db.from("volumes").select("*").eq("serie_id", id).order("numero"));
     if (!error) await rememberVols(id, vols);
     state.vols = error ? (await local.get(`vols:${id}`)) ?? [] : vols ?? [];
+    retenirVoisins(state.vols);
     if (error && !state.vols.length) { app.innerHTML = `<button class="back">${t("back")}</button><p class="empty">${t("notCached")}</p>`;
       app.querySelector(".back").onclick = () => { state.view = "catalogue"; render(); }; setNav(); return; }
     state.vols = state.vols.map(v => ({ ...v, serie_type: s.type }));
@@ -1441,13 +1463,12 @@
   // ---------- Page œuvre : toutes les éditions en rangées ----------
   function tile(v, s, large = false) {
     const e = state.coll.get(v.id) ?? { quantite: 0, souhait: false };
-    const img = v.photo_url || v.couverture_url || (v.isbn13 ? `https://covers.openlibrary.org/b/isbn/${v.isbn13}-M.jpg?default=false` : "");
     const produit = s.type && !["manga", "light_novel"].includes(s.type);
     const nom = large || produit ? (v.titre || v.variante_nom || s.titre) : `${t("tome")} ${v.numero}`;
     const sous = (large ? (v.variante_nom && v.variante_nom !== nom ? v.variante_nom : v.contenu) : (v.variante && v.variante_nom ? v.variante_nom : ""))
       ?.replace(/\s*97[89]\d{10}/g, "").replace(/^.*(Réimpression|Autre tirage).*$/i, t("reimp"));
     return `<div class="tile ${large ? "wide" : ""} ${e.quantite > 0 ? "owned" : e.souhait ? "wished" : ""}" data-vid="${v.id}" role="button" tabindex="0">
-      <div class="tile-cover">${large ? "" : v.numero}${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.remove()">` : ""}
+      <div class="tile-cover">${large ? "" : v.numero}${imgCouv(v, "M")}
         ${e.quantite > 1 ? `<span class="dblb">×${e.quantite}</span>` : ""}${!e.quantite && e.souhait ? `<span class="heart">♥</span>` : ""}
         ${e.lu ? `<span class="lub" title="${esc(t("readDone"))}">📖</span>` : ""}</div>
       <button class="tick" data-tick aria-label="${esc(e.quantite > 0 ? t("own") : t("own"))}">${e.quantite > 0 ? "✓" : "+"}</button>
@@ -1552,6 +1573,7 @@
   }
 
   function dessinerOeuvre(toutes, vols, first) {
+    retenirVoisins(vols);
     setTimeout(() => enrichirGenres(toutes, vols), 0);
     setTimeout(() => completerOeuvre(toutes, vols), 0);
     const s0 = toutes[0];
