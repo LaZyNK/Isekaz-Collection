@@ -1,4 +1,4 @@
-name: Importer une série (ISBN BnF)
+name: Importer une série (ISBN)
 
 # Lancement manuel : onglet "Actions" > "Importer une série (ISBN BnF)" > "Run workflow"
 on:
@@ -20,6 +20,15 @@ on:
         default: ""
       nb_tomes:
         description: "Nombre de tomes (facultatif)"
+        required: false
+        default: ""
+      source:
+        description: "Source des ISBN"
+        type: choice
+        options: [auto, glenat, google, bnf]
+        default: auto
+      url_serie:
+        description: "Adresse de la page série chez l'éditeur (facultatif)"
         required: false
         default: ""
       dry_run:
@@ -56,8 +65,11 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run }}
           FORCER: ${{ inputs.forcer }}
           DETAIL: ${{ inputs.detail }}
+          SOURCE: ${{ inputs.source }}
+          URL_SERIE: ${{ inputs.url_serie }}
         run: |
-          args=(--titre "$TITRE" --editeur "$EDITEUR" --edition "$EDITION")
+          args=(--titre "$TITRE" --editeur "$EDITEUR" --edition "$EDITION" --source "$SOURCE")
+          [ -n "$URL_SERIE" ] && args+=(--url-serie "$URL_SERIE")
           [ -n "$AUTEUR" ] && args+=(--auteur "$AUTEUR")
           [ -n "$NB_TOMES" ] && args+=(--nb-tomes "$NB_TOMES")
           [ "$DRY_RUN" = "true" ] && args+=(--dry-run)

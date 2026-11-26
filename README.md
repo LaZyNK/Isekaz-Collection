@@ -4,7 +4,7 @@ Site de collectionneur manga : catalogue des séries réelles avec les ISBN de c
 
 - **Site** : `index.html` (GitHub Pages), lit la base Supabase en lecture seule.
 - **Base** : Supabase, projet `isekai-collection` (tables `series` et `volumes`, voir `supabase/schema.sql`).
-- **Import des ISBN** : `scripts/import_isbn.py`, qui interroge le catalogue de la BnF (dépôt légal, gratuit).
+- **Import des ISBN** : `scripts/import_isbn.py`, qui lit le site de l’éditeur (Glénat), Google Books ou le catalogue BnF.
 
 ## Mise en route (une seule fois)
 
@@ -16,7 +16,7 @@ Site de collectionneur manga : catalogue des séries réelles avec les ISBN de c
 
 ## Ajouter une série
 
-Onglet **Actions → « Importer une série (ISBN BnF) » → Run workflow**, puis remplir :
+Onglet **Actions → « Importer une série (ISBN) » → Run workflow**, puis remplir :
 titre, éditeur, édition (si plusieurs éditions existent), nombre de tomes.
 Coche « Test à blanc » la première fois pour vérifier ce qui sera importé sans rien écrire.
 

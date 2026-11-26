@@ -2,8 +2,10 @@
 """
 Isekaz Collection — import automatique des tomes d'une série manga et de leurs ISBN.
 
-Source : catalogue de la Bibliothèque nationale de France (API SRU, gratuite, sans clé),
-qui reçoit le dépôt légal de chaque livre publié en France.
+Sources (option --source) :
+  - glenat : pages « série » du site Glénat (le plus fiable pour Glénat) ;
+  - google : Google Books (la plupart des autres éditeurs) ;
+  - bnf    : catalogue BnF (complet mais mélange les éditions et les coffrets).
 Destination : tables `series` et `volumes` du projet Supabase.
 
 Exemples :
@@ -137,6 +139,63 @@ def search_bnf(titre: str, editeur: str | None):
         time.sleep(0.5)  # on reste poli avec la BnF
 
 
+def slugify(txt: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", norm(txt)).strip("-")
+
+
+def notice(isbn, numero, titre, edition="", annee="", info=""):
+    return {"isbns": [isbn], "numero": numero, "titre": titre, "sous_titre": "",
+            "edition": edition, "collection": info, "editeur": "", "annee": annee, "fmt": "", "prix": ""}
+
+
+def search_glenat(titre, edition, url_serie=None):
+    """Lit les pages « série » du site Glénat : chaque lien produit contient le n° de tome et l'EAN."""
+    base = url_serie or f"https://www.glenat.com/glenat-manga/series-{slugify(f'{titre} {edition}')}/"
+    base = base.rstrip("/") + "/"
+    print(f"   page série Glénat : {base}")
+    vus, page = set(), 1
+    headers = {"User-Agent": "Mozilla/5.0 (Isekaz Collection; import ISBN)"}
+    while page <= 20:
+        url = base if page == 1 else f"{base}{page}/"
+        r = requests.get(url, headers=headers, timeout=60)
+        if r.status_code == 404:
+            break
+        r.raise_for_status()
+        liens = re.findall(r'href="(?:https://www\.glenat\.com)?/glenat-manga/([^"/]*?)-tome-0*(\d+)-(\d{13})/?"', r.text)
+        # on ne garde que les produits de CETTE série (pas les « même auteur » en bas de page)
+        prefixe = slugify(f"{titre} {edition}")
+        nouveaux = [l for l in liens if l[2] not in vus and l[0].startswith(prefixe)]
+        if not nouveaux:
+            break
+        for slug, num, ean in nouveaux:
+            vus.add(ean)
+            yield notice(ean, int(num), titre, edition, info="glenat.com")
+        page += 1
+        time.sleep(0.5)
+
+
+def search_google(titre, editeur, edition):
+    """Google Books : marche pour la plupart des éditeurs français (Kana, Pika, Ki-oon, Kurokawa…)."""
+    q = f'intitle:"{titre}"' + (f' intitle:"{edition}"' if edition else "") + f' inpublisher:"{editeur}"'
+    for start in range(0, 400, 40):
+        r = requests.get("https://www.googleapis.com/books/v1/volumes", timeout=60, params={
+            "q": q, "maxResults": 40, "startIndex": start, "printType": "books", "langRestrict": "fr"})
+        r.raise_for_status()
+        items = r.json().get("items", [])
+        for it in items:
+            vi = it.get("volumeInfo", {})
+            full = f"{vi.get('title', '')} {vi.get('subtitle', '')}"
+            isbn = next((i["identifier"] for i in vi.get("industryIdentifiers", [])
+                         if i.get("type") == "ISBN_13"), None)
+            m = re.search(r"(?:tome|vol(?:ume)?\.?|t\.)\s*0*(\d+)", full, re.I) or re.search(r"\b0*(\d{1,3})\s*$", full.strip())
+            if isbn and m:
+                yield notice(isbn, int(m.group(1)), vi.get("title", ""), edition,
+                             (vi.get("publishedDate") or "")[:4], info=full.strip()[:60])
+        if len(items) < 40:
+            break
+        time.sleep(0.5)
+
+
 def pick_volumes(notices, titre, edition, nb_tomes):
     """Garde un ISBN par numéro de tome, en filtrant sur le titre et l'édition."""
     t, e = norm(titre), norm(edition or "")
@@ -199,19 +258,30 @@ class Supabase:
 
 
 def main():
-    p = argparse.ArgumentParser(description="Importe les ISBN d'une série depuis la BnF vers Supabase.")
+    p = argparse.ArgumentParser(description="Importe les ISBN d'une série (site éditeur, Google Books ou BnF) vers Supabase.")
     p.add_argument("--titre", required=True)
     p.add_argument("--editeur", required=True)
     p.add_argument("--edition", default="", help='ex. "Édition originale" (laisser vide si une seule édition)')
     p.add_argument("--auteur", default=None)
     p.add_argument("--nb-tomes", type=int, default=None)
     p.add_argument("--dry-run", action="store_true", help="affiche le résultat sans rien écrire")
+    p.add_argument("--source", default="auto", choices=["auto", "glenat", "google", "bnf"],
+                   help="auto = site Glénat pour Glénat, Google Books sinon")
+    p.add_argument("--url-serie", default=None, help="adresse de la page série chez l'éditeur (si l'adresse devinée ne marche pas)")
     p.add_argument("--detail", action="store_true", help="affiche toutes les notices BnF trouvées")
     p.add_argument("--forcer", action="store_true", help="écrit même si plusieurs ISBN existent pour un tome")
     a = p.parse_args()
 
-    print(f"🔎 Recherche BnF : {a.titre} / {a.editeur} {('/ ' + a.edition) if a.edition else ''}")
-    notices = list(search_bnf(a.titre, a.editeur))
+    source = a.source
+    if source == "auto":
+        source = "glenat" if norm(a.editeur).startswith("glenat") else "google"
+    print(f"🔎 Recherche ({source}) : {a.titre} / {a.editeur} {('/ ' + a.edition) if a.edition else ''}")
+    if source == "glenat":
+        notices = list(search_glenat(a.titre, a.edition, a.url_serie))
+    elif source == "google":
+        notices = list(search_google(a.titre, a.editeur, a.edition))
+    else:
+        notices = list(search_bnf(a.titre, a.editeur))
     print(f"   {len(notices)} notices trouvées")
     if a.detail:
         for n in sorted(notices, key=lambda n: (n["numero"] or 0, n["annee"])):
