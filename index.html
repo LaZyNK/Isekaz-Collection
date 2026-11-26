@@ -360,7 +360,8 @@
       passPh: "Mot de passe (6 caractères min.)", doLogin: "Se connecter", doSignup: "Créer mon compte",
       footer: "le catalogue des collectionneurs de manga",
       heroTag: "Le sanctuaire des collectionneurs", heroText: "Retrouve chaque série, chaque tome et son ISBN. Coche ce que tu possèdes, compte tes doubles, prépare ta liste de souhaits — et monte en niveau.",
-      statSeries: "séries", statVols: "tomes", statLevel: "ton niveau",
+      statSeries: "séries au catalogue", statVols: "tomes au catalogue", statLevel: "ton niveau",
+      statMySeries: "séries suivies", statMyVols: "tomes possédés",
       editionLang: "Langue de l'édition :", allSeries: "Toutes les séries", results: "Résultats",
       volsRef: n => `${n} tome(s) référencé(s)`, tome: "Tome", missingIsbn: "ISBN manquant",
       own: "✓ Je l'ai", removeOne: "Retirer un exemplaire", addOne: "Ajouter un exemplaire (double)", wishT: "Liste de souhaits",
@@ -428,7 +429,8 @@
       passPh: "Password (6 characters min.)", doLogin: "Log in", doSignup: "Create my account",
       footer: "the manga collectors' catalogue",
       heroTag: "The collectors' sanctuary", heroText: "Find every series, every volume and its ISBN. Tick what you own, count your duplicates, build your wishlist — and level up.",
-      statSeries: "series", statVols: "volumes", statLevel: "your level",
+      statSeries: "series in the catalogue", statVols: "volumes in the catalogue", statLevel: "your level",
+      statMySeries: "series followed", statMyVols: "volumes owned",
       editionLang: "Edition language:", allSeries: "All series", results: "Results",
       volsRef: n => `${n} volume(s) listed`, tome: "Vol.", missingIsbn: "Missing ISBN",
       own: "✓ I own it", removeOne: "Remove a copy", addOne: "Add a copy (duplicate)", wishT: "Wishlist",
@@ -654,11 +656,12 @@
       store.set("isekaz.lastUser", { id: state.user.id });
       const [{ data: p, error: e1 }, { data: c, error: e2 }] = await Promise.all([
         avecDelai(db.from("profiles").select("pseudo").eq("id", state.user.id).maybeSingle()),
-        avecDelai(db.from("collection").select("volume_id, quantite, souhait")),
+        avecDelai(db.from("collection").select("volume_id, quantite, souhait, volumes(serie_id)")),
       ]);
       state.profile = e1 ? await local.get(`profile:${state.user.id}`) : p;
       if (!e1 && p) await local.set(`profile:${state.user.id}`, p);
-      const rows = e2 ? (await local.get(`coll:${state.user.id}`)) ?? [] : c ?? [];
+      const rows = e2 ? (await local.get(`coll:${state.user.id}`)) ?? []
+        : (c ?? []).map(({ volumes, ...r }) => ({ ...r, serie_id: volumes?.serie_id ?? null }));
       rows.forEach(r => state.coll.set(r.volume_id, r));
       // les changements pas encore envoyés passent devant ce que dit le serveur
       Object.values(await queueGet()).forEach(o => (o.quantite === 0 && !o.souhait) ? state.coll.delete(o.volume_id) : state.coll.set(o.volume_id, o));
@@ -745,6 +748,7 @@
       qu[volumeId] = { volume_id: volumeId, quantite: next.quantite, souhait: next.souhait, at };
       await queueSet(qu);
     }
+    if (!next.serie_id) for (const { vols } of mem.values()) { const v = vols.find(x => x.id === volumeId); if (v) { next.serie_id = v.serie_id; break; } }
     if (next.quantite === 0 && !next.souhait) state.coll.delete(volumeId); else state.coll.set(volumeId, next);
     await saveColl();
     renderAccount(); render(); updateOffline();
@@ -866,8 +870,12 @@
       <div><div class="kanji">異世界 · コレクション</div>
         <h2>Isekaz <span>Collection</span></h2>
         <p><b style="color:var(--white)">${t("heroTag")}.</b> ${t("heroText")}</p>
-        <div class="hero-stats"><div><b>${state.series.length}</b>${t("statSeries")}</div><div><b>${vols}</b>${t("statVols")}</div>
-        ${state.user ? `<div><b>${t("lvl")} ${stats().niveau}</b>${t("statLevel")}</div>` : ""}</div>
+        <div class="hero-stats">${state.user ? (() => {
+          const st = stats();
+          const suivies = new Set([...state.coll.values()].filter(r => r.quantite > 0).map(r => r.serie_id).filter(Boolean)).size;
+          return `<div><b>${suivies}</b>${t("statMySeries")}</div><div><b>${st.possedes}</b>${t("statMyVols")}</div>
+            <div><b>${t("lvl")} ${st.niveau}</b>${t("statLevel")}</div>`;
+        })() : `<div><b>${regrouper(state.series).length}</b>${t("statSeries")}</div><div><b>${vols}</b>${t("statVols")}</div>`}</div>
       </div></section>`;
   }
 
