@@ -8,6 +8,10 @@
 <meta name="theme-color" content="#0a0607">
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Isekaz">
 <meta property="og:image" content="assets/isekaz-512.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -147,14 +151,26 @@
   .tabs button.on { color: var(--white); border-color: var(--red); }
   .err { color: #ff8a96; font-size: 13px; min-height: 1em; margin: 0; }
 
+  /* ---------- Hors ligne / installation ---------- */
+  .offline { position: relative; z-index: 9; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+             background: linear-gradient(90deg, #3a0d15, #5a1420, #3a0d15); color: var(--white); font-size: 13px; padding: 8px 14px; text-align: center; }
+  .offline[hidden] { display: none; }
+  .offline .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sakura); box-shadow: 0 0 8px var(--sakura); }
+  .sync { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .install { display: none; }
+  .install.show { display: inline-block; }
+  .tip { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+
   @media (max-width: 640px) {
-    .brand h1 { font-size: 24px; } .brand h1 span { display: none; } .brand img { width: 32px; height: 32px; }
+    .brand h1 { font-size: 24px; } .brand h1 span { display: none; } .brand img { width: 34px; height: 34px; }
+    .top.logged .brand h1 { display: none; }
+    .account { gap: 6px; } .lang { padding: 5px 2px; font-size: 12px; }
     .account .pseudo { max-width: 80px; } .account .btn.ghost { padding: 7px 9px; }
     .hero { grid-template-columns: 110px 1fr; gap: 14px; align-items: start; }
     .hero-art { border-radius: 14px; }
     .hero p { display: none; }
     .hero-stats { gap: 14px; margin-top: 8px; } .hero-stats b { font-size: 24px; }
-    nav { width: 100%; justify-content: space-between; } nav button { flex: 1; padding: 7px 6px; }
+    nav { width: 100%; justify-content: space-between; } nav button { flex: 1; padding: 7px 4px; font-size: 13px; white-space: nowrap; }
   }
   @media (prefers-reduced-motion: reduce) { .hero-art { animation: none; } .card, .card:hover { transition: none; transform: none; } }
 </style>
@@ -176,6 +192,7 @@
       <input id="q" type="search" autocomplete="off" data-i18n-placeholder="searchPh">
       <button class="btn" type="submit" data-i18n="search"></button>
     </form>
+    <button class="btn ghost install" id="installBtn" type="button">📲 <span data-i18n="install"></span></button>
     <nav id="nav">
       <button data-view="catalogue" class="on" data-i18n="catalogue"></button>
       <button data-view="collection" data-i18n="myCollection"></button>
@@ -183,6 +200,7 @@
     </nav>
   </div>
 </header>
+<div class="offline" id="offline" hidden><span class="dot"></span><span id="offlineText"></span></div>
 <main>
   <p class="notice" id="notice" role="status"></p>
   <div id="app"></div>
@@ -238,6 +256,12 @@
       pseudoTaken: "Ce pseudo est déjà pris.", badLogin: "E-mail ou mot de passe incorrect.",
       checkMail: "Compte créé ! Clique sur le lien reçu par e-mail pour l'activer, puis connecte-toi.",
       langs: { fr: "Français", en: "English", de: "Deutsch", it: "Italiano", es: "Español", ja: "日本語", pt: "Português", ko: "한국어", nl: "Nederlands", pl: "Polski", zh: "中文", autre: "Autres" },
+      offline: "Hors ligne — tu consultes ta copie enregistrée sur cet appareil.", pending: n => `${n} changement(s) seront envoyés au retour du réseau.`,
+      synced: n => `${n} changement(s) fait(s) hors ligne envoyé(s) ✓`, install: "Installer",
+      iosInstall: "Sur iPhone : appuie sur le bouton Partager de Safari, puis « Sur l'écran d'accueil ».",
+      notCached: "Cette série n'a pas encore été enregistrée sur cet appareil. Ouvre-la une fois avec du réseau pour l'avoir hors ligne.",
+      offlineSearch: "La recherche chez les éditeurs a besoin du réseau. Tu peux quand même filtrer le catalogue enregistré.",
+      offlineReady: "Ta collection est enregistrée sur cet appareil : elle marchera aussi sans réseau.",
     },
     en: {
       searchPh: "A series or an ISBN (even if it's not on the site yet)", search: "Search",
@@ -267,6 +291,12 @@
       pseudoTaken: "This username is already taken.", badLogin: "Wrong email or password.",
       checkMail: "Account created! Click the link sent by email to activate it, then log in.",
       langs: { fr: "Français", en: "English", de: "Deutsch", it: "Italiano", es: "Español", ja: "日本語", pt: "Português", ko: "한국어", nl: "Nederlands", pl: "Polski", zh: "中文", autre: "Other" },
+      offline: "Offline — you're viewing the copy saved on this device.", pending: n => `${n} change(s) will be sent when you're back online.`,
+      synced: n => `${n} offline change(s) sent ✓`, install: "Install",
+      iosInstall: "On iPhone: tap Safari's Share button, then “Add to Home Screen”.",
+      notCached: "This series isn't saved on this device yet. Open it once while online to have it offline.",
+      offlineSearch: "Searching the publishers needs a connection. You can still filter the saved catalogue.",
+      offlineReady: "Your collection is saved on this device: it will work without a connection too.",
     },
   };
   const store = {
@@ -291,20 +321,95 @@
                   editionLangs: new Set(store.get("isekaz.editionLangs", [lang])) };
   const TORII = `<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 4.5c3 .8 6.5 1.1 10 1.1s7-.3 10-1.1V7c-.9.2-1.8.4-2.8.5V9H21v2h-1.8v9h-2.2v-9H7v9H4.8v-9H3V9h1.8V7.5C3.8 7.4 2.9 7.2 2 7V4.5zM7 7.8V9h4V8c-1.4 0-2.7-.1-4-.2zm6 .2v1h4V7.8c-1.3.1-2.6.2-4 .2z"/></svg>`;
 
+  // ---------- Copie locale (hors ligne) ----------
+  // Tout ce qui est lu en ligne est aussi rangé ici, pour pouvoir le relire sans réseau.
+  const local = (() => {
+    let dbp;
+    const open = () => dbp ??= new Promise((ok, ko) => {
+      const r = indexedDB.open("isekaz", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("kv");
+      r.onsuccess = () => ok(r.result); r.onerror = () => ko(r.error);
+    });
+    const run = (mode, fn) => open().then(d => new Promise((ok, ko) => {
+      const tx = d.transaction("kv", mode); const req = fn(tx.objectStore("kv"));
+      tx.oncomplete = () => ok(req?.result); tx.onerror = () => ko(tx.error);
+    })).catch(() => undefined);
+    return { get: k => run("readonly", s => s.get(k)), set: (k, v) => run("readwrite", s => s.put(v, k)), del: k => run("readwrite", s => s.delete(k)) };
+  })();
+  const isOffline = () => !navigator.onLine;
+  const netError = e => e && (isOffline() || /fetch|network|load failed/i.test(e.message ?? String(e)));
+
+  // Modifications faites sans réseau : gardées (une par tome) puis envoyées au retour du réseau.
+  async function queueGet() { return state.user ? (await local.get(`queue:${state.user.id}`)) ?? {} : {}; }
+  async function queueSet(qu) { if (state.user) await local.set(`queue:${state.user.id}`, qu); }
+  async function saveColl() { if (state.user) await local.set(`coll:${state.user.id}`, [...state.coll.values()]); }
+
+  async function flushQueue() {
+    if (!state.user || isOffline()) return;
+    const qu = await queueGet(), ops = Object.values(qu);
+    if (!ops.length) return updateOffline();
+    let sent = 0;
+    for (const o of ops) {
+      const { error } = (o.quantite === 0 && !o.souhait)
+        ? await db.from("collection").delete().eq("volume_id", o.volume_id).eq("user_id", state.user.id)
+        : await db.from("collection").upsert({ user_id: state.user.id, volume_id: o.volume_id, quantite: o.quantite,
+            souhait: o.souhait, updated_at: o.at }, { onConflict: "user_id,volume_id" });
+      if (error) { if (netError(error)) break; } // coupure : on réessaiera plus tard
+      delete qu[o.volume_id]; sent++;
+    }
+    await queueSet(qu);
+    if (sent) say(t("synced", sent));
+    updateOffline();
+  }
+
+  async function updateOffline() {
+    const n = Object.keys(await queueGet()).length;
+    $("offline").hidden = !isOffline() && !n;
+    $("offlineText").textContent = isOffline() ? t("offline") + (n ? " " + t("pending", n) : "") : t("pending", n);
+  }
+
+  // Avec du réseau : on enregistre toutes les séries de la collection (et leurs couvertures) pour le hors ligne.
+  async function prefetchForOffline() {
+    if (!state.user || isOffline()) return;
+    const ids = [...state.coll.keys()];
+    if (!ids.length) return;
+    const { data: mine, error } = await db.from("volumes").select("serie_id").in("id", ids);
+    if (error) return;
+    const serieIds = [...new Set(mine.map(v => v.serie_id))];
+    const { data: vols } = await db.from("volumes").select("*").in("serie_id", serieIds).order("numero");
+    const par = {};
+    (vols ?? []).forEach(v => (par[v.serie_id] ??= []).push(v));
+    for (const [sid, vs] of Object.entries(par)) await local.set(`vols:${sid}`, vs);
+    // les couvertures passent par le service worker, qui les garde
+    const covers = (vols ?? []).map(v => v.couverture_url || `https://covers.openlibrary.org/b/isbn/${v.isbn13}-M.jpg?default=false`);
+    for (const u of covers.slice(0, 400)) { try { await fetch(u, { mode: "no-cors" }); } catch { /* tant pis */ } }
+    if (!store.get("isekaz.offlineReadyShown", false)) { store.set("isekaz.offlineReadyShown", true); say(t("offlineReady")); }
+  }
+
   // ---------- Compte ----------
   async function loadUser() {
     const { data: { session } } = await db.auth.getSession();
     state.user = session?.user ?? null;
+    if (!state.user && isOffline()) state.user = (await local.get("lastUser")) ?? null; // jeton expiré sans réseau
     state.profile = null; state.coll = new Map();
     if (state.user) {
-      const [{ data: p }, { data: c }] = await Promise.all([
+      await local.set("lastUser", { id: state.user.id });
+      const [{ data: p, error: e1 }, { data: c, error: e2 }] = await Promise.all([
         db.from("profiles").select("pseudo").eq("id", state.user.id).maybeSingle(),
         db.from("collection").select("volume_id, quantite, souhait"),
       ]);
-      state.profile = p;
-      (c ?? []).forEach(r => state.coll.set(r.volume_id, r));
+      state.profile = e1 ? await local.get(`profile:${state.user.id}`) : p;
+      if (!e1 && p) await local.set(`profile:${state.user.id}`, p);
+      const rows = e2 ? (await local.get(`coll:${state.user.id}`)) ?? [] : c ?? [];
+      rows.forEach(r => state.coll.set(r.volume_id, r));
+      // les changements pas encore envoyés passent devant ce que dit le serveur
+      Object.values(await queueGet()).forEach(o => (o.quantite === 0 && !o.souhait) ? state.coll.delete(o.volume_id) : state.coll.set(o.volume_id, o));
+      await saveColl();
+    } else {
+      await local.del("lastUser");
     }
     renderAccount();
+    updateOffline();
   }
 
   function stats() {
@@ -319,6 +424,7 @@
 
   function renderAccount() {
     const el = $("account");
+    document.querySelector(".top").classList.toggle("logged", !!state.user);
     if (!state.user) { el.innerHTML = `<button class="btn" id="loginBtn">${t("login")}</button>`; $("loginBtn").onclick = () => openAuth("login"); return; }
     const s = stats();
     el.innerHTML = `<span style="display:inline-flex;gap:8px;align-items:center">
@@ -367,25 +473,38 @@
     const next = { ...cur, ...patch };
     next.quantite = Math.max(0, Math.min(99, next.quantite));
     if (next.quantite > 0) next.souhait = false; // on l'a : il sort de la liste de souhaits
-    const { error } = (next.quantite === 0 && !next.souhait)
-      ? await db.from("collection").delete().eq("volume_id", volumeId).eq("user_id", state.user.id)
-      : await db.from("collection").upsert({ user_id: state.user.id, volume_id: volumeId, quantite: next.quantite,
-          souhait: next.souhait, updated_at: new Date().toISOString() }, { onConflict: "user_id,volume_id" });
-    if (error) { say(t("error") + error.message); return; }
+    const at = new Date().toISOString();
+    let error = null;
+    if (!isOffline() && !Object.keys(await queueGet()).length) {
+      ({ error } = (next.quantite === 0 && !next.souhait)
+        ? await db.from("collection").delete().eq("volume_id", volumeId).eq("user_id", state.user.id)
+        : await db.from("collection").upsert({ user_id: state.user.id, volume_id: volumeId, quantite: next.quantite,
+            souhait: next.souhait, updated_at: at }, { onConflict: "user_id,volume_id" }));
+      if (error && !netError(error)) { say(t("error") + error.message); return; }
+    }
+    if (isOffline() || error || Object.keys(await queueGet()).length) {
+      const qu = await queueGet();
+      qu[volumeId] = { volume_id: volumeId, quantite: next.quantite, souhait: next.souhait, at };
+      await queueSet(qu);
+    }
     if (next.quantite === 0 && !next.souhait) state.coll.delete(volumeId); else state.coll.set(volumeId, next);
-    renderAccount(); render();
+    await saveColl();
+    renderAccount(); render(); updateOffline();
+    if (!isOffline()) flushQueue();
   }
 
   // ---------- Données ----------
   async function loadSeries() {
     const { data, error } = await db.from("series").select("*, volumes(count)").order("titre");
-    if (error) { say(t("error") + error.message); return; }
-    state.series = data;
+    if (!error) { state.series = data; await local.set("series", data); return; }
+    state.series = (await local.get("series")) ?? [];
+    if (!netError(error)) say(t("error") + error.message);
   }
 
   async function searchOnline(text) {
     const digits = text.replace(/[^0-9]/g, "");
     const body = digits.length === 13 ? { isbn: digits } : { q: text };
+    if (isOffline()) { say(t("offlineSearch")); return; }
     if (body.isbn) say(t("searchingIsbn")); else if (!notice.textContent) say(t("searching", text));
     try {
       const r = await fetch(`${URL_SB}/functions/v1/recherche`, { method: "POST",
@@ -497,8 +616,11 @@
     const first = state.view !== "serie" || state.serie !== id;
     state.view = "serie"; state.serie = id; state.filterIds = null;
     const s = state.series.find(x => x.id === id) ?? (await db.from("series").select("*, volumes(count)").eq("id", id).single()).data;
-    const { data: vols } = await db.from("volumes").select("*").eq("serie_id", id).order("numero");
-    state.vols = vols ?? [];
+    const { data: vols, error } = await db.from("volumes").select("*").eq("serie_id", id).order("numero");
+    if (!error) await local.set(`vols:${id}`, vols);
+    state.vols = error ? (await local.get(`vols:${id}`)) ?? [] : vols ?? [];
+    if (error && !state.vols.length) { app.innerHTML = `<button class="back">${t("back")}</button><p class="empty">${t("notCached")}</p>`;
+      app.querySelector(".back").onclick = () => { state.view = "catalogue"; render(); }; setNav(); return; }
     const byNum = Object.fromEntries(state.vols.map(v => [v.numero, v]));
     const max = Math.max(s.nb_tomes ?? 0, ...state.vols.map(v => v.numero), 0);
     const owned = state.vols.filter(v => (state.coll.get(v.id)?.quantite ?? 0) > 0).length;
@@ -532,7 +654,13 @@
       <div class="stat"><b>${s.possedes}</b>${t("tomes")}</div><div class="stat"><b>${s.doubles}</b>${t("doublesL")}</div>
       <div class="stat"><b>${t("lvl")} ${s.niveau}</b>${t("nextLevel", s.prochain)}</div></div>` : "";
     if (!ids.length) { app.innerHTML = head + `<p class="empty">${kind === "souhaits" ? t("emptyWish") : t("emptyColl")}</p>`; return; }
-    const { data: vols } = await db.from("volumes").select("*, series(id, titre, edition, editeur, langue)").in("id", ids).order("numero");
+    let { data: vols, error } = await db.from("volumes").select("*, series(id, titre, edition, editeur, langue)").in("id", ids).order("numero");
+    if (error) { // hors ligne : on recompose depuis la copie locale
+      const want = new Set(ids); vols = [];
+      for (const s of state.series) for (const v of (await local.get(`vols:${s.id}`)) ?? [])
+        if (want.has(v.id)) vols.push({ ...v, series: s });
+      vols.sort((a, b) => a.numero - b.numero);
+    }
     const parSerie = new Map();
     (vols ?? []).forEach(v => parSerie.set(v.series.id, [...(parSerie.get(v.series.id) ?? []), v]));
     app.innerHTML = head + [...parSerie.values()].map(vs => `
@@ -555,7 +683,7 @@
   // ---------- Événements ----------
   document.querySelectorAll("#nav button").forEach(b => b.onclick = () => { state.view = b.dataset.view; state.filterIds = null; say(""); render(); });
   $("home").onclick = () => { state.view = "catalogue"; state.filterIds = null; q.value = ""; say(""); render(); };
-  $("siteLang").onchange = e => { lang = e.target.value; store.set("isekaz.lang", lang); applyI18n(); renderAccount(); render(); };
+  $("siteLang").onchange = e => { lang = e.target.value; store.set("isekaz.lang", lang); applyI18n(); renderAccount(); render(); updateOffline(); };
   q.addEventListener("input", () => { state.filterIds = null; if (state.view !== "catalogue") state.view = "catalogue"; say(""); renderCatalogue(); setNav(); });
   $("searchForm").addEventListener("submit", e => {
     e.preventDefault();
@@ -613,10 +741,24 @@
     resize(); if (petals.length) tick();
   })();
 
+  // ---------- Application installable + hors ligne ----------
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("sw.js").catch(() => {});
+  let installEvt = null;
+  addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; $("installBtn").classList.add("show"); });
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !standalone) $("installBtn").classList.add("show");
+  $("installBtn").onclick = async () => {
+    if (installEvt) { installEvt.prompt(); await installEvt.userChoice; installEvt = null; $("installBtn").classList.remove("show"); }
+    else say(t("iosInstall"));
+  };
+  addEventListener("online", async () => { await flushQueue(); await loadSeries(); await loadUser(); render(); prefetchForOffline(); });
+  addEventListener("offline", () => updateOffline());
+
   applyI18n();
   await loadSeries();
   await loadUser();
   render();
+  flushQueue().then(prefetchForOffline);
 </script>
 </body>
 </html>
