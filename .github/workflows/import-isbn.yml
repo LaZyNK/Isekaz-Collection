@@ -1,0 +1,54 @@
+name: Importer une série (ISBN BnF)
+
+# Lancement manuel : onglet "Actions" > "Importer une série (ISBN BnF)" > "Run workflow"
+on:
+  workflow_dispatch:
+    inputs:
+      titre:
+        description: "Titre de la série (ex. Dragon Ball)"
+        required: true
+      editeur:
+        description: "Éditeur (ex. Glénat)"
+        required: true
+      edition:
+        description: "Édition (ex. Édition originale) — vide si une seule"
+        required: false
+        default: ""
+      auteur:
+        description: "Auteur (facultatif)"
+        required: false
+        default: ""
+      nb_tomes:
+        description: "Nombre de tomes (facultatif)"
+        required: false
+        default: ""
+      dry_run:
+        description: "Test à blanc (n'écrit rien dans la base)"
+        type: boolean
+        default: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: Import
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          TITRE: ${{ inputs.titre }}
+          EDITEUR: ${{ inputs.editeur }}
+          EDITION: ${{ inputs.edition }}
+          AUTEUR: ${{ inputs.auteur }}
+          NB_TOMES: ${{ inputs.nb_tomes }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          args=(--titre "$TITRE" --editeur "$EDITEUR" --edition "$EDITION")
+          [ -n "$AUTEUR" ] && args+=(--auteur "$AUTEUR")
+          [ -n "$NB_TOMES" ] && args+=(--nb-tomes "$NB_TOMES")
+          [ "$DRY_RUN" = "true" ] && args+=(--dry-run)
+          python scripts/import_isbn.py "${args[@]}"
