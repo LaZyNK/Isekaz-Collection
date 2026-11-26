@@ -34,9 +34,9 @@ UA = {"User-Agent": "IsekazCollection/1.0 (catalogue manga; contact via GitHub L
 
 # Éditeur (nom affiché) -> (texte cherché à la BnF, ne publie que du manga ?)
 EDITEURS = {
-    "Pika": ("Pika", True), "Kana": ("Kana", False), "Glénat": ("Glénat", False), "Ki-oon": ("Ki-oon", True),
+    "Pika": ("Pika", True), "Kana": ("Kana", True), "Glénat": ("Glénat", False), "Ki-oon": ("Ki-oon", True),
     "Kurokawa": ("Kurokawa", True), "Kazé": ("Kazé", True), "Crunchyroll": ("Crunchyroll", True),
-    "Delcourt/Tonkam": ("Tonkam", False), "Delcourt": ("Delcourt", False), "Akata": ("Akata", True),
+    "Delcourt/Tonkam": ("Tonkam", True), "Delcourt": ("Delcourt", False), "Akata": ("Akata", True),
     "Doki-Doki": ("Doki-Doki", True), "Komikku": ("Komikku", True), "Meian": ("Meian", True),
     "Mangetsu": ("Mangetsu", True), "Noeve Grafx": ("Noeve", True), "Ototo": ("Ototo", True),
     "Taifu": ("Taifu", True), "Panini": ("Panini", False), "Soleil": ("Soleil", False),
