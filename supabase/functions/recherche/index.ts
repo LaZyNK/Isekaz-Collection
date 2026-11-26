@@ -19,6 +19,30 @@ type Tome = { titre: string; edition: string | null; editeur: string; auteur: st
               numero: number; isbn13: string; date: string | null; couverture: string | null };
 
 const clean = (s: string) => s.replace(/\s+/g, " ").trim();
+const ISBN_FR = /^(9782\d{9}|97910\d{8})$/;
+const INCONNU = "Inconnu";
+
+// Google ne donne pas toujours l'éditeur : on le retrouve grâce au préfixe éditeur de l'ISBN
+// (ex. 978-2-8116… et 979-10-433… = Pika) en le comparant aux autres tomes trouvés.
+function resoudreEditeurs(tomes: Tome[]): Tome[] {
+  const connus = tomes.filter((t) => t.editeur !== INCONNU);
+  const out: Tome[] = [];
+  for (const t of tomes) {
+    if (t.editeur !== INCONNU) { out.push(t); continue; }
+    let trouve: string | null = null;
+    for (const len of [9, 8, 7]) {
+      const c = connus.find((k) => k.isbn13.slice(0, len) === t.isbn13.slice(0, len));
+      if (c) { trouve = c.editeur; break; }
+    }
+    if (trouve) out.push({ ...t, editeur: trouve }); // sinon on l'écarte : éditeur introuvable
+  }
+  return out;
+}
+
+function sansDoublons(tomes: Tome[]): Tome[] {
+  const vus = new Set<string>();
+  return tomes.filter((t) => !vus.has(t.isbn13) && vus.add(t.isbn13));
+}
 
 function editeurPropre(p: string): string {
   return clean(p.replace(/(^|\s)(mangas?|[ée]ditions?|sas|sarl)(?=\s|,|$)/giu, " ").replace(/[,.]+$/, "")) || p;
@@ -49,6 +73,7 @@ async function google(q: string, start = 0): Promise<Tome[]> {
   url.searchParams.set("maxResults", "40");
   url.searchParams.set("startIndex", String(start));
   url.searchParams.set("printType", "books");
+  url.searchParams.set("langRestrict", "fr");
   if (GOOGLE_KEY) url.searchParams.set("key", GOOGLE_KEY);
   const r = await fetch(url);
   if (!r.ok) { console.log("google", r.status, await r.text()); return []; }
@@ -57,10 +82,12 @@ async function google(q: string, start = 0): Promise<Tome[]> {
   for (const it of items) {
     const vi = it.volumeInfo ?? {};
     const isbn = (vi.industryIdentifiers ?? []).find((i: any) => i.type === "ISBN_13")?.identifier;
-    if (!isbn || !/^97[89]\d{10}$/.test(isbn)) continue;
+    // éditions françaises uniquement : ISBN 978-2… ou 979-10… et livre en français
+    if (!isbn || !ISBN_FR.test(isbn)) continue;
+    if (vi.language && vi.language !== "fr") continue;
     const t = analyseTitre(clean(`${vi.title ?? ""} ${vi.subtitle ? "- " + vi.subtitle : ""}`)) ?? analyseTitre(vi.title ?? "");
     if (!t) continue;
-    out.push({ ...t, editeur: editeurPropre(vi.publisher ?? "Inconnu"), auteur: vi.authors?.[0] ?? null,
+    out.push({ ...t, editeur: editeurPropre(vi.publisher ?? INCONNU), auteur: vi.authors?.[0] ?? null,
       isbn13: isbn, date: /^\d{4}-\d{2}-\d{2}$/.test(vi.publishedDate ?? "") ? vi.publishedDate : null,
       couverture: vi.imageLinks?.thumbnail?.replace("http://", "https://") ?? null });
   }
@@ -70,11 +97,12 @@ async function google(q: string, start = 0): Promise<Tome[]> {
 async function openLibrary(isbn: string): Promise<Tome[]> {
   const r = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
   if (!r.ok) return [];
+  if (!ISBN_FR.test(isbn)) return [];
   const b = (await r.json())[`ISBN:${isbn}`];
   if (!b) return [];
   const t = analyseTitre(clean(`${b.title ?? ""} ${b.subtitle ? "- " + b.subtitle : ""}`));
   if (!t) return [];
-  return [{ ...t, editeur: editeurPropre(b.publishers?.[0]?.name ?? "Inconnu"), auteur: b.authors?.[0]?.name ?? null,
+  return [{ ...t, editeur: editeurPropre(b.publishers?.[0]?.name ?? INCONNU), auteur: b.authors?.[0]?.name ?? null,
     isbn13: isbn, date: null, couverture: b.cover?.medium ?? null }];
 }
 
@@ -122,6 +150,7 @@ Deno.serve(async (req) => {
   const isbn = String(body.isbn ?? "").replace(/[^0-9Xx]/g, "");
   if (isbn) {
     if (!/^97[89]\d{10}$/.test(isbn)) return json({ error: "ISBN-13 invalide" }, 400);
+    if (!ISBN_FR.test(isbn)) return json({ series: [], source: "etranger" });
     const { data: v } = await db.from("volumes").select("serie_id").eq("isbn13", isbn).maybeSingle();
     if (v) return json({ series: [v.serie_id], source: "base" });
     let tomes = await google(`isbn:${isbn}`);
@@ -129,16 +158,24 @@ Deno.serve(async (req) => {
     if (!tomes.length) return json({ series: [], source: "introuvable" });
     const t = tomes[0];
     // on profite de la recherche pour récupérer les autres tomes de la série
-    const autres = await google(`intitle:"${t.titre}" inpublisher:"${t.editeur}"`);
-    const ids = await enregistrer([t, ...autres.filter((a) => a.titre.toLowerCase() === t.titre.toLowerCase())]);
+    const cible = t.editeur === INCONNU ? `intitle:"${t.titre}"` : `intitle:"${t.titre}" inpublisher:"${t.editeur}"`;
+    const autres = (await Promise.all([0, 40].map((s) => google(cible, s)))).flat();
+    const ids = await enregistrer(resoudreEditeurs(sansDoublons([t, ...autres]))
+      .filter((a) => a.titre.toLowerCase() === t.titre.toLowerCase()));
     return json({ series: ids.slice(0, 1).concat(ids.slice(1)), source: "ajout" });
   }
 
   const q = clean(String(body.q ?? ""));
   if (q.length < 3 || q.length > 80) return json({ error: "Recherche trop courte ou trop longue" }, 400);
-  const pages = await Promise.all([google(`intitle:${q}`, 0), google(`intitle:${q}`, 40)]);
   const mots = q.toLowerCase().split(/\s+/);
-  const tomes = pages.flat().filter((t) => mots.every((m) => `${t.titre} ${t.edition ?? ""}`.toLowerCase().includes(m)));
+  const garde = (t: Tome) => mots.every((m) => `${t.titre} ${t.edition ?? ""}`.toLowerCase().includes(m));
+  const pages = await Promise.all([google(`intitle:${q}`, 0), google(`intitle:${q}`, 40)]);
+  let tomes = resoudreEditeurs(sansDoublons(pages.flat())).filter(garde);
+  // 2e passage ciblé « titre + éditeur » pour compléter les tomes manquants (3 séries max)
+  const cibles = [...new Map(tomes.map((t) => [`${t.titre}|${t.editeur}`.toLowerCase(), t])).values()].slice(0, 3);
+  const complements = await Promise.all(cibles.flatMap((c) =>
+    [0, 40].map((s) => google(`intitle:"${c.titre}" inpublisher:"${c.editeur}"`, s))));
+  tomes = resoudreEditeurs(sansDoublons([...tomes, ...complements.flat()])).filter(garde);
   const ids = await enregistrer(tomes);
   return json({ series: [...new Set(ids)], source: tomes.length ? "ajout" : "introuvable" });
 });
