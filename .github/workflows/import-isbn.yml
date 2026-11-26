@@ -26,6 +26,10 @@ on:
         description: "Test à blanc (n'écrit rien dans la base)"
         type: boolean
         default: true
+      detail:
+        description: "Afficher toutes les notices BnF (diagnostic)"
+        type: boolean
+        default: false
       forcer:
         description: "Forcer l'écriture même si plusieurs ISBN par tome"
         type: boolean
@@ -51,10 +55,12 @@ jobs:
           NB_TOMES: ${{ inputs.nb_tomes }}
           DRY_RUN: ${{ inputs.dry_run }}
           FORCER: ${{ inputs.forcer }}
+          DETAIL: ${{ inputs.detail }}
         run: |
           args=(--titre "$TITRE" --editeur "$EDITEUR" --edition "$EDITION")
           [ -n "$AUTEUR" ] && args+=(--auteur "$AUTEUR")
           [ -n "$NB_TOMES" ] && args+=(--nb-tomes "$NB_TOMES")
           [ "$DRY_RUN" = "true" ] && args+=(--dry-run)
           [ "$FORCER" = "true" ] && args+=(--forcer)
+          [ "$DETAIL" = "true" ] && args+=(--detail)
           python scripts/import_isbn.py "${args[@]}"

@@ -78,7 +78,7 @@ def tome_number(rec_fields) -> int | None:
 
 
 def parse_record(record):
-    fields = {tag: subfields(record, tag) for tag in ("010", "200", "205", "210", "214", "225", "461")}
+    fields = {tag: subfields(record, tag) for tag in ("010", "200", "205", "210", "214", "215", "225", "461")}
     isbns = [isbn13(v) for f in fields["010"] for v in f.get("a", [])]
     isbns = [i for i in isbns if i]
     titre = " ".join(v for f in fields["200"] for v in f.get("a", []))
@@ -93,7 +93,11 @@ def parse_record(record):
                 m = re.search(r"\d{4}", v)
                 if m and not date:
                     date = m.group()
+    fmt = " ".join(v for f in fields["215"] for v in f.get("a", []) + f.get("d", []))
+    prix = " ".join(v for f in fields["010"] for v in f.get("b", []) + f.get("d", []))
     return {
+        "fmt": fmt,
+        "prix": prix,
         "isbns": isbns,
         "numero": tome_number(fields),
         "titre": titre,
@@ -202,12 +206,18 @@ def main():
     p.add_argument("--auteur", default=None)
     p.add_argument("--nb-tomes", type=int, default=None)
     p.add_argument("--dry-run", action="store_true", help="affiche le résultat sans rien écrire")
+    p.add_argument("--detail", action="store_true", help="affiche toutes les notices BnF trouvées")
     p.add_argument("--forcer", action="store_true", help="écrit même si plusieurs ISBN existent pour un tome")
     a = p.parse_args()
 
     print(f"🔎 Recherche BnF : {a.titre} / {a.editeur} {('/ ' + a.edition) if a.edition else ''}")
     notices = list(search_bnf(a.titre, a.editeur))
     print(f"   {len(notices)} notices trouvées")
+    if a.detail:
+        for n in sorted(notices, key=lambda n: (n["numero"] or 0, n["annee"])):
+            print(f"   T{n['numero']!s:>4} | {','.join(n['isbns']) or '-':<28} | {n['annee']:<4} | "
+                  f"{n['titre'][:25]:<25} | éd: {n['edition'][:25]:<25} | coll: {n['collection'][:30]:<30} | "
+                  f"{n['fmt'][:25]} | {n['prix'][:30]}")
     volumes, doublons = pick_volumes(notices, a.titre, a.edition, a.nb_tomes)
     print(f"   {len(volumes)} tomes avec ISBN retenus")
     for num, isbns in sorted(doublons.items()):
