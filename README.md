@@ -10,7 +10,7 @@ Site de collectionneur manga : catalogue des séries réelles avec les ISBN de c
 
 1. **Secrets GitHub** : *Settings → Secrets and variables → Actions → New repository secret*
    - `SUPABASE_URL` = `https://rohiqowmjtcrrailkgdb.supabase.co`
-   - `SUPABASE_SERVICE_KEY` = la clé **service_role** (Supabase → Project Settings → API Keys).
+   - `SUPABASE_SERVICE_KEY` = la clé **secrète** `sb_secret_…` (ou l'ancienne clé service_role), dans Supabase → Project Settings → API Keys.
      ⚠️ Cette clé est secrète : jamais dans `index.html` ni dans un commit.
 2. **GitHub Pages** : *Settings → Pages → Source : Deploy from a branch → `main` / root*.
 

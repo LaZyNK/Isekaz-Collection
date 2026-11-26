@@ -161,11 +161,11 @@ def pick_volumes(notices, titre, edition, nb_tomes):
 class Supabase:
     def __init__(self, url, key):
         self.base = url.rstrip("/") + "/rest/v1"
-        self.h = {
-            "apikey": key,
-            "Authorization": f"Bearer {key}",
-            "Content-Type": "application/json",
-        }
+        self.h = {"apikey": key, "Content-Type": "application/json"}
+        # Les anciennes clés service_role (JWT) passent aussi en Bearer ;
+        # les nouvelles clés secrètes (sb_secret_...) s'envoient uniquement dans "apikey".
+        if not key.startswith("sb_"):
+            self.h["Authorization"] = f"Bearer {key}"
 
     def serie_id(self, titre, edition, editeur, auteur, nb_tomes):
         params = {"titre": f"eq.{titre}", "editeur": f"eq.{editeur}", "select": "id"}
